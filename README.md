@@ -1,6 +1,6 @@
 # Setup
 
-Please, first of all, download this repository locally:
+Please, first of all, download this repository locally :
 ```
 git clone https://github.com/G-Molano-LA/structured-python.git
 ```
