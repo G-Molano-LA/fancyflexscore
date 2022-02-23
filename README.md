@@ -65,3 +65,4 @@ setup(name='Structured Python',
   packages=['', ''],
 )
 ```
+Thanks!
