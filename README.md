@@ -66,3 +66,19 @@ setup(name='Structured Python',
 )
 ```
 Thanks!
+
+### Possible approach
+```
+The **B-factor is** a cristallography parameter to determine flexibility. It is based on the movement of the different residues when applying temperature (it's not exactly like that, but you get the concept). So, it could be a good parameter to get the score, but some more restrains could be applied in order to make the score even better: **type of secondary structure, hydrophobicity regions and aminoacid preference** (how aminoacids interact with the other aminoacids in the region). However, as a first approach it could be enough.
+So, this parameter is obtained from crystallography approaches and it's found in the last numeric column of the PDB file By knowing the ranges of this parameter (15-30 as rigid and above for flexible regions) we can make some score associations. Taking this into account, we have an open source app which is AlphaFold2, which provides a PDB file for the predicted protein where the B-factor appears. 
+I realized the prediction of the B-factor is quite bad, since it gives very big values, so maybe we should scale them or do some kind of cross-validation with the structure prediction found in the mmCIF file. Or just use this structure prediction to assess scoring.
+In case of finally using the b-factor somehow, we can normalize it by z-scores which is done in the following reference:
+https://www.blopig.com/blog/2015/08/using-b-factors-to-assess-flexibility/
+
+We also have servers or applications for flexibility prediction like MEDUSA: https://www.dsimb.inserm.fr/MEDUSA/index.html, which can be useful for assessing if our scoring is properly done.
+
+As an example of other year's project:
+https://github.com/martaferri/SBI_Project
+
+
+```
