@@ -83,3 +83,6 @@ https://github.com/martaferri/SBI_Project
 #### Python's teacher remarks
 
 Since implementing Alphafold in python is computationally very expensive, we can extract pdb files from the AlphaFold's already predicted repository or from the PDB if the structure is known.
+
+## Baldo's remarks
+You can use the b-factor to calculate the protein flexibility, however, this parameter is not totally correct as it contains cristall vibrations.
