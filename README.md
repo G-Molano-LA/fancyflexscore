@@ -32,34 +32,35 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 
 # TO DO LIST
 
-1. [ ] Search candidates that has similar structure with our target protein:
+1. Search candidates that has similar structure with our target protein:
   - [ ] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
   - [ ] Implement the pairwise aln in python
-2. [ ] With these candidates, obtain regions of similarity:
+2. With these candidates, obtain regions of similarity:
   - [ ] Decide which multiple **STRUCTURAL** aln (MSA) approach to use
   - [ ] Implement the MSA in python
-3. [ ] Obtain b-factors of regions of similarity (implement in python):
+3. Obtain b-factors of regions of similarity (implement in python):
   - [ ] Identify regions of similarity in the MSA
   - [ ] Take the b-factor of this regions of similarity:
     - If there there is only one candidate sharing this region: take the alfa-carbon b-factor of the aminoacids
     - If there is more than one candidate sharing this region: take the mean of the alfa-carbon b-factor of the aminoacid
   - [ ] Standaritze values
-4. [ ] Compute values based on structural restraints.
-5. [ ] Compute values based on hidrofobicity.
-6. [ ] Give weights to the different parameters:
-    - B-factors ex. 0.33
-    - Secondary structure restraints ex. 0.33
-    - Hidrofobicity ex. 0.33  
-7. [ ] Obtain a final flexibility score:
+4. Compute values based on:
+  - [ ] structural restraints.
+  - [ ] Compute values based on hidrofobicity.
+5. Give weights to the different parameters:
+    - [ ] B-factors ex. 0.33
+    - [ ] Secondary structure restraints ex. 0.33
+    - [ ] Hidrofobicity ex. 0.33  
+6. Obtain a final flexibility score:
   - [ ] Weighted score for each aminoacid
   - [ ] Define a threshold to decide if the weighted score is flexible or not = obtain 0 and 1s.
   - [ ] Obtain the final score for each aminoacid by applying the threshold. (airi formula)
     $$ f(x) = $$
   - [ ] Sum all 0,1s and normalize by the number of aminoacids (average). (airi formula)
     $$ \sigma = $$
-8. As a final output we can give:
-  - Total protein score
-  - Score associated to each aminoacid
+8. Do documentation:
+  -  [ ] Tutorial with examples on how to use the program
+  -  [ ] Analysis of examples of 4 cases. The results analyis should contain at least two cases of the following list, and two other cases (not necessarily in this list).
 
 
 # LIMITATIONS
@@ -78,7 +79,7 @@ Programming a standalone program for solving a specific problems.
 
 
  **Objective**: To develop a flexibility score for proteins  
- **Input**: protein sequence or protein family  
+ **Input**: protein sequence or protein family. The input should be a sequence in FASTA format, not a uniprot code.
  **Output**:  
  - Flexibility score for each aminoacid in the protein sequence
   - Parseable text output files
