@@ -10,9 +10,9 @@ git clone https://github.com/G-Molano-LA/structured-python.git
 Programming a standalone program for solving a specific problems.
 
 
- **Objective**: To develop a flexibility score for proteins
- **Input**: protein sequence or protein family
- **Output**:
+ **Objective**: To develop a flexibility score for proteins  
+ **Input**: protein sequence or protein family  
+ **Output**:  
  - Flexibility score for each aminoacid in the protein sequence
   - Parseable text output files
   - Graphical representation of the scores
