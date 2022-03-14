@@ -71,6 +71,9 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 
 - Our approach do not take into account unkwnon regions as we do not obtain b-factors. To supply this missing values we thought to put the mean of b-factor, but, as we standarize this value later, we decided that makes no sense to put the mean (as gives 0 in standarization).
 
+# DEPENDENCIES
+- ICM installed
+
 # REMARKS  
 - Baldo's said : "You can use the b-factor to calculate the protein flexibility, however, this parameter is not totally correct as it contains cristall vibrations."
 - Gery said: b-factor del alpha fold = bad predictions (all have high values)  
