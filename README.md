@@ -25,8 +25,9 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
   - Secondary structure restraints
   - Hidrofobicity
 6. Define a threshold to decide if the score for each aminoacid is flexible or not (1, 0).
-7. Sum all 0,1s and normalize by the number of aminoacids (average).
-8. As a final output we can give:
+7. Scan the sequence by triplets to check for different state residues in the middle of the triplet to correct it.
+8. Sum all 0,1s and normalize by the number of aminoacids (average).
+9. As a final output we can give:
   - Total protein score
   - Score associated to each aminoacid
 
