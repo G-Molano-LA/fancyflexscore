@@ -32,13 +32,13 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 
 # TO DO LIST
 
-1. Search candidates that has similar structure with our target protein:
+1. Search candidates that has similar structure with our target protein: GERARD
   - [ ] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
   - [ ] Implement the pairwise aln in python
-2. With these candidates, obtain regions of similarity:
+2. With these candidates, obtain regions of similarity: IRIA
   - [ ] Decide which multiple **STRUCTURAL** aln (MSA) approach to use
   - [ ] Implement the MSA in python
-3. Obtain b-factors of regions of similarity (implement in python):
+3. Obtain b-factors of regions of similarity (implement in python): ALEJANDRA
   - [ ] Identify regions of similarity in the MSA
   - [ ] Take the b-factor of this regions of similarity:
     - If there there is only one candidate sharing this region: take the alfa-carbon b-factor of the aminoacids
