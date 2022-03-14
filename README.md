@@ -63,6 +63,7 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
   - [ ] Sum all 0,1s and normalize by the number of aminoacids (average). (airi formula)
     $$ \sigma = $$
 8. Do documentation:
+  -  [ ] Configure logging for all the modules
   -  [ ] Tutorial with examples on how to use the program
   -  [ ] Analysis of examples of 4 cases. The results analyis should contain at least two cases of the following list, and two other cases (not necessarily in this list).
 
