@@ -50,7 +50,7 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
     - B-factors ex. 0.33
     - Secondary structure restraints ex. 0.33
     - Hidrofobicity ex. 0.33  
-7-  [ ] Obtain a final flexibility score:
+7. [ ] Obtain a final flexibility score:
   - [ ] Weighted score for each aminoacid
   - [ ] Define a threshold to decide if the weighted score is flexible or not = obtain 0 and 1s.
   - [ ] Obtain the final score for each aminoacid by applying the threshold. (airi formula)
