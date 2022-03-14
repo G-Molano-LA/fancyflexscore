@@ -4,6 +4,74 @@ Please, first of all, download this repository locally :
 ```
 git clone https://github.com/G-Molano-LA/structured-python.git
 ```
+# KEY IDEA
+
+The protein flexibility depends on several parameters. There are some parameter that are indicators of that:
+- B-factor
+- Secondary structure  
+- Hidrofobicity
+
+Then, the key idea is to use this 3 parameters to calculate our flexibility score.
+
+To begin with, we have a protein sequence as a input that has no known pdb file. So.
+1. Search candidates that has similar structure with our target protein -> Pairwise aln (BLAST, jackhmmer or similar approaches)
+2. With these candidates, obtain regions of similarity -> Multiple **STRUCTURAL** aln
+3. Obtain b-factors of regions of similarity (perform an average of the candidates).
+4. Compute b-factor calculation:
+  1. Obtain the b-factor associated to the alfa-carbon of each aminoacid.
+  2. Standarize b-factors.
+5. Compute a flexibility score for **each aminoacid** based on:
+  - B-factors
+  - Secondary structure restraints
+  - Hidrofobicity
+6. Define a threshold to decide if the score for each aminoacid is flexible or not (1, 0).
+7. Sum all 0,1s and normalize by the number of aminoacids (average).
+8. As a final output we can give:
+  - Total protein score
+  - Score associated to each aminoacids
+
+# TO DO LIST
+
+1. [ ] Search candidates that has similar structure with our target protein:
+  - [ ] Decide which workflow is better to follow to obtain pairwise
+
+
+---
+  
+2. With these candidates, obtain regions of similarity -> Multiple **STRUCTURAL** aln
+3. Obtain b-factors of regions of similarity (perform an average of the candidates).
+4. Compute b-factor calculation:
+  1. Obtain the b-factor associated to the alfa-carbon of each aminoacid.
+  2. Standarize b-factors.
+5. Compute a flexibility score for **each aminoacid** based on:
+  - B-factors
+  - Secondary structure restraints
+  - Hidrofobicity
+6. Define a threshold to decide if the score for each aminoacid is flexible or not (1, 0).
+7. Sum all 0,1s and normalize by the number of aminoacids (average).
+8. As a final output we can give:
+  - Total protein score
+  - Score associated to each aminoacids
+
+- [ ] B-factor
+  - [ ] theoretical part
+  - [ ] Standarization
+  - [ ] Categorize b-factor: (airi pon la función en latex) = 0,1 por ahora
+    - [ ] Define threshold
+      $$  f(x) $$
+  - Method to obtain the b-factor total of the backbone protein: (airi formula)
+    $$ \sigma = $$
+  - Modify the obtained store by
+
+# LIMITATIONS
+
+- Our approach do not take into account unkwnon regions as we do not obtain b-factors. To supply this missing values we thought to put the mean of b-factor, but, as we standarize this value later, we decided that makes no sense to put the mean (as gives 0 in standarization).
+
+# REMARKS  
+- Baldo's said : "You can use the b-factor to calculate the protein flexibility, however, this parameter is not totally correct as it contains cristall vibrations."
+- Gery said: b-factor del alpha fold = bad predictions (all have high values)  
+
+
 
 # Project Objective
 
@@ -70,7 +138,7 @@ Thanks!
 ### Possible approach
 
 The **B-factor is** a cristallography parameter to determine flexibility. It is based on the movement of the different residues when applying temperature (it's not exactly like that, but you get the concept). So, it could be a good parameter to get the score, but some more restrains could be applied in order to make the score even better: **type of secondary structure, hydrophobicity regions and aminoacid preference** (how aminoacids interact with the other aminoacids in the region). However, as a first approach it could be enough.
-So, this parameter is obtained from crystallography approaches and it's found in the last numeric column of the PDB file By knowing the ranges of this parameter (15-30 as rigid and above for flexible regions) we can make some score associations. Taking this into account, we have an open source app which is AlphaFold2, which provides a PDB file for the predicted protein where the B-factor appears. 
+So, this parameter is obtained from crystallography approaches and it's found in the last numeric column of the PDB file By knowing the ranges of this parameter (15-30 as rigid and above for flexible regions) we can make some score associations. Taking this into account, we have an open source app which is AlphaFold2, which provides a PDB file for the predicted protein where the B-factor appears.
 I realized the prediction of the B-factor is quite bad, since it gives very big values, so maybe we should scale them or do some kind of cross-validation with the structure prediction found in the mmCIF file. Or just use this structure prediction to assess scoring.
 In case of finally using the b-factor somehow, we can normalize it by z-scores which is done in the following reference:
 https://www.blopig.com/blog/2015/08/using-b-factors-to-assess-flexibility/
@@ -83,6 +151,3 @@ https://github.com/martaferri/SBI_Project
 #### Python's teacher remarks
 
 Since implementing Alphafold in python is computationally very expensive, we can extract pdb files from the AlphaFold's already predicted repository or from the PDB if the structure is known.
-
-## Baldo's remarks
-You can use the b-factor to calculate the protein flexibility, however, this parameter is not totally correct as it contains cristall vibrations.
