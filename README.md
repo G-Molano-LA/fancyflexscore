@@ -50,31 +50,17 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
     - B-factors ex. 0.33
     - Secondary structure restraints ex. 0.33
     - Hidrofobicity ex. 0.33
-
----
-  
-7. Compute b-factor calculation:
-  1. Obtain the b-factor associated to the alfa-carbon of each aminoacid.
-  2. Standarize b-factors.
-5. Compute a flexibility score for **each aminoacid** based on:
-  - B-factors
-  - Secondary structure restraints
-  - Hidrofobicity
-6. Define a threshold to decide if the score for each aminoacid is flexible or not (1, 0).
-7. Sum all 0,1s and normalize by the number of aminoacids (average).
+7. [ ] Obtain a final flexibility score:
+  - [ ] Weighted score for each aminoacid
+  - [ ] Define a threshold to decide if the weighted score is flexible or not = obtain 0 and 1s.
+  - [ ] Obtain the final score for each aminoacid by applying the threshold. (airi formula)
+    $$ f(x) = $$
+  - [ ] Sum all 0,1s and normalize by the number of aminoacids (average). (airi formula)
+    $$ \sigma = $$
 8. As a final output we can give:
   - Total protein score
-  - Score associated to each aminoacids
+  - Score associated to each aminoacid
 
-- [ ] B-factor
-  - [ ] theoretical part
-  - [ ] Standarization
-  - [ ] Categorize b-factor: (airi pon la función en latex) = 0,1 por ahora
-    - [ ] Define threshold
-      $$  f(x) $$
-  - Method to obtain the b-factor total of the backbone protein: (airi formula)
-    $$ \sigma = $$
-  - Modify the obtained store by
 
 # LIMITATIONS
 
