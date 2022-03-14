@@ -36,26 +36,26 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 1. Search candidates that has similar structure with our target protein: GERARD
   - [ ] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
   - [ ] Implement the pairwise aln in python
-2. Obtain the PDB model of the target protein:
+2. Obtain the PDB model of the target protein: ALE
   - [ ] Obtain PDB from alpha-fold is the sequence is not known
   - [ ] Obtain PDB from database if the protein is known
-4. With these candidates, obtain regions of similarity: IRIA
+3. With these candidates, obtain regions of similarity: IRIA
   - [ ] Decide which multiple **STRUCTURAL** aln (MSA) approach to use
   - [ ] Implement the MSA in python
-5. Obtain b-factors of regions of similarity (implement in python): ALEJANDRA
+4. Obtain b-factors of regions of similarity (implement in python):
   - [ ] Identify regions of similarity in the MSA
   - [ ] Take the b-factor of this regions of similarity:
     - If there there is only one candidate sharing this region: take the alfa-carbon b-factor of the aminoacids
     - If there is more than one candidate sharing this region: take the mean of the alfa-carbon b-factor of the aminoacid
   - [ ] Standaritze values
-6. Compute values based on:
+5. Compute values based on:
   - [ ] Structural restraints.
   - [ ] Hidrofobicity.
-7. Give weights to the different parameters:
+6. Give weights to the different parameters:
     - [ ] B-factors ex. 0.33
     - [ ] Secondary structure restraints ex. 0.33
     - [ ] Hidrofobicity ex. 0.33  
-8. Obtain a final flexibility score:
+7. Obtain a final flexibility score:
   - [ ] Weighted score for each aminoacid
   - [ ] Define a threshold to decide if the weighted score is flexible or not = obtain 0 and 1s.
   - [ ] Obtain the final score for each aminoacid by applying the threshold. (airi formula)
