@@ -28,19 +28,32 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 7. Sum all 0,1s and normalize by the number of aminoacids (average).
 8. As a final output we can give:
   - Total protein score
-  - Score associated to each aminoacids
+  - Score associated to each aminoacid
 
 # TO DO LIST
 
 1. [ ] Search candidates that has similar structure with our target protein:
-  - [ ] Decide which workflow is better to follow to obtain pairwise
-
+  - [ ] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
+  - [ ] Implement the pairwise aln in python
+2. [ ] With these candidates, obtain regions of similarity:
+  - [ ] Decide which multiple **STRUCTURAL** aln (MSA) approach to use
+  - [ ] Implement the MSA in python
+3. [ ] Obtain b-factors of regions of similarity (implement in python):
+  - [ ] Identify regions of similarity in the MSA
+  - [ ] Take the b-factor of this regions of similarity:
+    - If there there is only one candidate sharing this region: take the alfa-carbon b-factor of the aminoacids
+    - If there is more than one candidate sharing this region: take the mean of the alfa-carbon b-factor of the aminoacid
+  - [ ] Standaritze values
+4. [ ] Compute values based on structural restraints.
+5. [ ] Compute values based on hidrofobicity.
+6. [ ] Give weights to the different parameters:
+    - B-factors ex. 0.33
+    - Secondary structure restraints ex. 0.33
+    - Hidrofobicity ex. 0.33
 
 ---
   
-2. With these candidates, obtain regions of similarity -> Multiple **STRUCTURAL** aln
-3. Obtain b-factors of regions of similarity (perform an average of the candidates).
-4. Compute b-factor calculation:
+7. Compute b-factor calculation:
   1. Obtain the b-factor associated to the alfa-carbon of each aminoacid.
   2. Standarize b-factors.
 5. Compute a flexibility score for **each aminoacid** based on:
