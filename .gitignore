@@ -1,0 +1,5 @@
+# MacOS DS
+.DS_Store
+
+# Directory with the virtual environment dependencies
+structured_py/
