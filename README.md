@@ -45,8 +45,8 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
     - If there is more than one candidate sharing this region: take the mean of the alfa-carbon b-factor of the aminoacid
   - [ ] Standaritze values
 4. Compute values based on:
-  - [ ] structural restraints.
-  - [ ] Compute values based on hidrofobicity.
+  - [ ] Structural restraints.
+  - [ ] Hidrofobicity.
 5. Give weights to the different parameters:
     - [ ] B-factors ex. 0.33
     - [ ] Secondary structure restraints ex. 0.33
