@@ -22,18 +22,18 @@ logging.basicConfig(filename='flexscore.log', encoding = 'utf-8', level=logging.
 ################################################################################
 
 # Inputs
-candidates = ["candidate1", "candidate2"]
+candidates = ["1A3N", "2DHB"]
 target     = ["target"]
 
 
 
 # 1. Obtain PDB files for candidates and target
-logging.info("Obtaining PDB files for candidates and target proteins")
+logging.info("Obtaining PDB files for candidate and target proteins")
 
 # Outputs
 ## ????
 pdb_files = [ name for name in candidates] # mejor hacer una copia o algo asi?
-pdb_files.insert(1, target)
+# pdb_files.insert(1, target)
 
 # 1.1. Obtain PDB file for candidate proteins
 logging.info("Obtaining PDB files for candidates")
@@ -47,31 +47,31 @@ r.download_pdb_files(pdb_codes = pdb_files, file_format = "pdb")
 
 
 # 1.2. Obtain PDB file for target protein
-logging.info("Obtaining PDB files for target protein")
-
-## If there is not pdb file, get from alpha fold
-if target_pdb is empty:
-    logging.info("Target protein has not PDB file. Getting structure from AlphaFold database")
-
-    # Obtain pdb file from AlphaFold
-    ## Define the remote file to retrieve
-    url = f"https://alphafold.ebi.ac.uk/files/AF-{target}-F1-model_v2.pdb"
-    # Define the local filename to save data
-    local_file = f'{target}.pdb'
-    # Make http request for remote file data
-    target_data = requests.get(url)
-    # Save file data to local copy
-    with open(local_file, 'wb')as file:
-        file.write(target_data.content)
+# logging.info("Obtaining PDB files for target protein")
+# 
+# ## If there is not pdb file, get from alpha fold
+# if target_pdb is empty:
+#     logging.info("Target protein has not PDB file. Getting structure from AlphaFold database")
+# 
+#     # Obtain pdb file from AlphaFold
+#     ## Define the remote file to retrieve
+#     url = f"https://alphafold.ebi.ac.uk/files/AF-{target}-F1-model_v2.pdb"
+#     # Define the local filename to save data
+#     local_file = f'{target}.pdb'
+#     # Make http request for remote file data
+#     target_data = requests.get(url)
+#     # Save file data to local copy
+#     with open(local_file, 'wb')as file:
+#         file.write(target_data.content)
 
 
 
 # 2. Read PDB files
-logging.info("Reading PDB files")
-## PBD parser instance
-p = PDBParser(PERMISSIVE = TRUE)
-
-
-# Parser PDB files
-for i in range(0, len(candidates), 1):
-    pdb_structures[candidates[i]] = p.get_structure(candidates[i], pdb_files[i])
+# logging.info("Reading PDB files")
+# ## PBD parser instance
+# p = PDBParser(PERMISSIVE = TRUE)
+# 
+# 
+# # Parser PDB files
+# for i in range(0, len(candidates), 1):
+#     pdb_structures[candidates[i]] = p.get_structure(candidates[i]+, pdb_files[i])
