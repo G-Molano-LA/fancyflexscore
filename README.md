@@ -34,15 +34,16 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 # TO DO LIST
 
 1. Search candidates that has similar structure with our target protein: GERARD
-  INPUT: Fasta Sequence of the target protein
-  OUTPUT: PDB codes
+  - INPUT: Fasta Sequence of the target protein
+  - OUTPUT: PDB codes (list) and chains of the pdbs (list)
   - [ ] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
   - [ ] Implement the pairwise aln in python
 2. Obtain the PDB model of the target protein: ALE
-  INPUT: PDB codes
-  OUTPUT: PDB files
-  - [ ] Obtain PDB from alpha-fold is the sequence is not known
-  - [ ] Obtain PDB from database if the protein is known
+  - INPUT: PDB codes
+  - OUTPUT: PDB fasta sequences
+  - [X] Download pdb files
+  - [X] Obtain fasta sequences
+  - [ ] Format of fasta sequences
 3. With these candidates, obtain regions of similarity: IRIA
   - [ ] Decide which multiple **STRUCTURAL** aln (MSA) approach to use
   - [ ] Implement the MSA in python
