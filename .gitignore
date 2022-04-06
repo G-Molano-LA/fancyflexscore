@@ -1,1 +1,8 @@
+<<<<<<< HEAD
+=======
+# MacOS DS
+.DS_Store
+
+# Directory with the virtual environment dependencies
+>>>>>>> 2822201dee4ce6f80029ea59cf76e1923adafc88
 structural_py/
