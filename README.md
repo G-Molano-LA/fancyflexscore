@@ -179,6 +179,6 @@ Since implementing Alphafold in python is computationally very expensive, we can
 
 ## Articles of interest
 
-[Functional aspects of protein flexibility](https://link.springer.com/article/10.1007/s00018-009-0014-6)
-[Utility of B-Factors in Protein Science](https://pubs.acs.org/doi/10.1021/acs.chemrev.8b00290)
-[Flexibility is a mechanical determinant of antimicrobial activity for amphipathic cationic α-helical antimicrobial peptides](https://www.sciencedirect.com/science/article/pii/S000527361300206X?via%3Dihub#s0010)
+[Functional aspects of protein flexibility](https://link.springer.com/article/10.1007/s00018-009-0014-6)  
+[Utility of B-Factors in Protein Science](https://pubs.acs.org/doi/10.1021/acs.chemrev.8b00290)  
+[Flexibility is a mechanical determinant of antimicrobial activity for amphipathic cationic α-helical antimicrobial peptides](https://www.sciencedirect.com/science/article/pii/S000527361300206X?via%3Dihub#s0010)  
