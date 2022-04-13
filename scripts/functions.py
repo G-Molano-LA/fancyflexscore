@@ -5,9 +5,9 @@ def get_pdb_homologs(input_file):
     This function conducts a BLASTP against the PDB database locally and retrieves the first 3 unique
     hits with their respective chains. Proteins with homology in several chains are not considered unique
     and only the first chain is kept.
-    In case less than 3 hits, with a lower threshold than 1e-20, are found two psi-blasts are conducted. First, 
-    against the Uniprot database to obtain the 3rd iteration PSSM and then against the PDB database using the 
-    obtained PSSM. This is only conducted to fill the three homologs in case not enough homologs are obtained 
+    In case less than 3 hits, with a lower threshold than 1e-20, are found two psi-blasts are conducted. First,
+    against the Uniprot database to obtain the 3rd iteration PSSM and then against the PDB database using the
+    obtained PSSM. This is only conducted to fill the three homologs in case not enough homologs are obtained
     with the BLASTP.
 
     Input: FASTA file with the query protein sequence
@@ -33,7 +33,7 @@ def get_pdb_homologs(input_file):
             for record in NCBIXML.parse(open("results.xml", "r")):
                 if record.alignments:
                     for align in record.alignments:
-                        for hsp in align.hsps: 
+                        for hsp in align.hsps:
                             if hsp.expect < E_VALUE_THRESH:
                                 hits_dict.setdefault(align.title[4:8], align.title[9])
 
@@ -51,7 +51,7 @@ def get_pdb_homologs(input_file):
                 for psirecord in NCBIXML.parse(open("psiblast_pdb_results.xml", "r")):
                     if psirecord.alignments:
                         for psialign in psirecord.alignments:
-                            for hsp in psialign.hsps: 
+                            for hsp in psialign.hsps:
                                 if hsp.expect < PSI_E_VALUE_THRESH:
                                     hits_dict.setdefault(psialign.title[4:8], psialign.title[9])
                     if len(hits_dict) == 3:
@@ -177,6 +177,16 @@ def get_bfactors(pdb_file, pdb_code, similarities):
             if position in similarities["position"]:
                 bfactor.append(atom.get_bfactor())
     return bfactor
+
+def normalize_bfactor(bfactor):
+    """Obtain the normalized b-factors of c-alpha atoms for regions of similarities
+
+    Return: list of normalized b-factors
+    """
+    import statistics
+    n_bfactor = list(map(lambda bf:
+                (bf-statistics.mean(bfactor))/statistics.stdev(bfactor), bfactor))
+    return n_bfactor
 
 if __name__ == '__main__':
     protein_codes = ["1a3n", "2dhb"] # PDB codes in lowercasese
