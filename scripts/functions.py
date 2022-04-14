@@ -124,65 +124,72 @@ def msa(pdb_seqs_filename):
     tcoffee_cline()
 
     # Read the MSA
-    msa             = AlignIO.read(msa_outfile, "clustal")
-    # Obtain the sequence of reference
-    msa_ref_seq     = msa[0].seq
+    msa_obj             = AlignIO.read(msa_outfile, "clustal")
+
+    return msa_obj
     # Obtain the annotation of clustalw format
-    msa_annotation  = read_clustal_annotations(msa_outfile)
+    msa_annotation  = clustal_annotations(msa_obj)
 
-    # Save the identifies in a list of tuples (aminoacid, position)
-    ## Use 1-based position annotation (be consistent with pdb file)
-    similarities = {"position": list(),
-                    "symbol": list()}
 
-    for i in range(len(msa_annotation)):
-        if msa_annotation[i] == "*":
-            similarities["position"].append(i+1)
-            similarities["symbol"].append(msa_ref_seq[i])
 
     return similarities
 
-def read_clustal_annotations(msa_outfile):
-    """Obtain the annotations ('*', '.' , ':', ' ') of clustalw alignment format.
+def clustal_annotations(msa_obj):
+    """Obtain all the residue positions that are identifical in the alignment.
+     Clustalw alignment annotations:
         '*'  -- all residues or nucleotides in that column are identical
         ':'  -- conserved substitutions have been observed
         '.'  -- semi-conserved substitutions have been observed
         ' '  -- no match.
 
-    Return: annotations
+    Return: list containing the residues positions that are identical
     """
-    with open(msa_outfile, 'r') as fh:
-        annotation_line = ""
+    # Get annotations of clustalw aln
+    annot = msa_obj.column_annotations['clustal_consensus']
+    # Obtain length of aln
+    msa_len = msa_obj.get_alignment_length()
+    # Obtain ref sequence
+    msa_ref_seq = msa_obj[0].seq
 
-        for line in fh:
-            if line.isspace():
-                pass
-            if '*' in line:
-                line = line.strip("\n")
-                annotation_line += line
-        return annotation_line
+    # PDB residue index
+    pdb_res_len = -1
+    # Similarities: list of tuples (residue, pdb_position)
+    similarities = list()
 
-def get_bfactors(pdb_file, pdb_code, similarities):
-    """Obtain the b-factors of c-alpha atoms for regions of similarities
+    for i in range(msa_len):
+        # Missing residues (X) or gaps (-) are ignored
+        if msa_ref_seq[i] != "X" and msa_ref_seq[i] != "-":
+            pdb_res_len += 1
+        if annot[i] == "*":
+            similarities.append(pdb_res_len)
+    return similarities, pdb_res_len
+
+
+def get_bfactors(pdb_file, pdb_code, pdb_res_len):
+    """Obtain the b-factors of c-alpha atoms for all the residues involved in the alignment
 
     Return: list of b-factors
     """
     from Bio.PDB import PDBParser
 
+    # Read pdb file
     with open(pdb_file, "r") as fh:
         parser = PDBParser()
         structure = parser.get_structure(pdb_code, fh)
 
-    bfactor = []
-    for atom in structure.get_atoms():
-        if atom.get_name() == 'CA':
-            position = atom.get_serial_number()
-            if position in similarities["position"]:
-                bfactor.append(atom.get_bfactor())
-    return bfactor
+    # Get the residues involved in the alignment
+    residues = [res for res in structure.get_residues()]
+
+    # Get the bfactors of the pdb residues involved in the alignment
+    bfactors = [residues[i].child_dict['CA'].get_bfactor() for i in range(len(residues))
+                if i <= pdb_res_len]
+    return bfactors
+
+
 
 def normalize_bfactor(bfactor):
-    """Obtain the normalized b-factors of c-alpha atoms for regions of similarities
+    """Obtain the normalized b-factors of c-alpha atoms
+    FORMULA!!!
 
     Return: list of normalized b-factors
     """
@@ -197,8 +204,15 @@ if __name__ == '__main__':
     # Output format of pdb_files
     pdb_outfiles = [f"structures/pdb{code}.ent" for code in protein_codes]
 
-
+    # Get PDB files
     pdb_seqs_filename = get_pdb_sequences(protein_codes, protein_chains, pdb_outfiles)
-    similarities= msa(pdb_seqs_filename)
+    # Perfom Multiple Sequence Aligment
+    msa_obj= msa(pdb_seqs_filename)
+    # Obtain position of identifical residues & the length of the pdb residues
+    similarities, pdb_res_len = clustal_annotations(msa_obj)
+    # Obtain b-factors for all the residues of the structure of reference
+    bfactors      = get_bfactors("structures/pdb1xb7.ent", protein_codes[0], pdb_res_len)
 
-    #bfactor = [get_bfactors(pdb_file, pdb_code, similarities) for pdb_file,pdb_code in zip(pdb_outfiles, protein_codes)]
+    norm_bfactors = normalize_bfactor(bfactors)
+    # B-factor of regions of similarities
+    sim_bfactor = [norm_bfactors[i] for i in range(len(norm_bfactors)) if i in similarities]
