@@ -1,5 +1,5 @@
 
-def get_pdb_homologs(input_file):
+def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
     """Obtain PDB codes and chains from protein homologs of the query protein
 
     This function conducts a BLASTP against the PDB database locally and retrieves the first 3 unique
@@ -21,56 +21,62 @@ def get_pdb_homologs(input_file):
     from Bio.Blast.Applications import NcbiblastpCommandline
     from Bio.Blast import NCBIXML
     from Bio.Blast.Applications import NcbipsiblastCommandline
+
     # Checking if the input is a file or a sequence:
-    if input_file:
-        if os.path.isfile(input_file):
-            blastp_cline = NcbiblastpCommandline(query = input_file, db = "../db/PDBdb", outfmt = 5, out = "results.xml")
-            stdout, stderr = blastp_cline()
+    if os.path.isfile(input_file):
+        # BLASTP
+        blastp_cline = NcbiblastpCommandline(query = input_file, db = "../db/PDBdb", outfmt = 5, out = "results.xml")
+        stdout, stderr = blastp_cline()
 
-            # Parse the results file
-            E_VALUE_THRESH = 1e-20
-            hits_dict = {}
-            for record in NCBIXML.parse(open("results.xml", "r")):
-                if record.alignments:
-                    for align in record.alignments:
-                        for hsp in align.hsps:
-                            if hsp.expect < E_VALUE_THRESH:
-                                hits_dict.setdefault(align.title[4:8], align.title[9])
+        # Parse the results file
+        # [?] Poner e-value threshold como argumento modificable del usuario
+        # [?] Porque esta en mayúscula?
+        E_VALUE_THRESH = 1e-20
+        hits_dict = {}
+        for record in NCBIXML.parse(open("results.xml", "r")):
+            if record.alignments:
+                for align in record.alignments:
+                    for hsp in align.hsps:
+                        if hsp.expect < E_VALUE_THRESH:
+                            hits_dict.setdefault(align.title[4:8], align.title[9])
 
-            # Obtain just the first three unique hits
-            if len(hits_dict) >= 3:
-                protein_codes = list(hits_dict.keys())[:3]
-                protein_codes = [x.lower() for x in protein_codes]
-                protein_chains = list(hits_dict.values())[:3]
-            else:
-                psiblast_uniprot_cline = NcbipsiblastCommandline(
-                    db = '../db/UNIPROTdb', query = input_file, evalue =  1 ,
-                    out = "psiblast_uniprot_results.xml", outfmt = 5,
-                    out_pssm = "psiblast_uniprot3.pssm", num_iterations = 3
-                    )
-                stdout_psi_uni, stderr_psi_uni = psiblast_uniprot_cline()
-                psiblast_pdb_cline = NcbipsiblastCommandline(
-                    db = '../db/PDBdb', out = "psiblast_pdb_results.xml", outfmt = 5,
-                    in_pssm = "psiblast_uniprot3.pssm"
-                    )
-                stdout_psi_pdb, stderr_psi_pdb = psiblast_pdb_cline()
-                PSI_E_VALUE_THRESH = 1e-4
-                for psirecord in NCBIXML.parse(open("psiblast_pdb_results.xml", "r")):
-                    if psirecord.alignments:
-                        for psialign in psirecord.alignments:
-                            for hsp in psialign.hsps:
-                                if hsp.expect < PSI_E_VALUE_THRESH:
-                                    hits_dict.setdefault(psialign.title[4:8], psialign.title[9])
-                    if len(hits_dict) == 3:
-                        break
-                protein_codes = list(hits_dict.keys())[:3]
-                protein_codes = [x.lower() for x in protein_codes]
-                protein_chains = list(hits_dict.values())[:3]
-
-            return protein_codes, protein_chains
-
+        # Obtain just the first three unique hits
+        if len(hits_dict) >= 3:
+            protein_codes = list(hits_dict.keys())[:3]
+            protein_codes = [x.lower() for x in protein_codes]
+            protein_chains = list(hits_dict.values())[:3]
         else:
-            print("Sorry, introduce a valid input")
+            # PSIBLAST
+            # [?] Poner e-value threshold como argumento modificable del usuario
+            # [?] Porque esta en mayúscula?
+            psiblast_uniprot_cline = NcbipsiblastCommandline(
+                db = '../db/UNIPROTdb', query = input_file, evalue =  1 ,
+                out = "psiblast_uniprot_results.xml", outfmt = 5,
+                out_pssm = "psiblast_uniprot3.pssm", num_iterations = 3
+                )
+            stdout_psi_uni, stderr_psi_uni = psiblast_uniprot_cline()
+            psiblast_pdb_cline = NcbipsiblastCommandline(
+                db = '../db/PDBdb', out = "psiblast_pdb_results.xml", outfmt = 5,
+                in_pssm = "psiblast_uniprot3.pssm"
+                )
+            stdout_psi_pdb, stderr_psi_pdb = psiblast_pdb_cline()
+            PSI_E_VALUE_THRESH = 1e-4
+            for psirecord in NCBIXML.parse(open("psiblast_pdb_results.xml", "r")):
+                if psirecord.alignments:
+                    for psialign in psirecord.alignments:
+                        for hsp in psialign.hsps:
+                            if hsp.expect < PSI_E_VALUE_THRESH:
+                                hits_dict.setdefault(psialign.title[4:8], psialign.title[9])
+                if len(hits_dict) == 3:
+                    break
+            protein_codes = list(hits_dict.keys())[:3]
+            protein_codes = [x.lower() for x in protein_codes]
+            protein_chains = list(hits_dict.values())[:3]
+
+        return protein_codes, protein_chains
+
+    else:
+        print("Sorry, introduce a valid input")
 
 
 def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):

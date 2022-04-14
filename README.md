@@ -34,37 +34,28 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 # TO DO LIST
 
 1. Search candidates that has similar structure with our target protein: GERARD
-<<<<<<< HEAD
-  INPUT: Fasta Sequence of the target protein
-  OUTPUT: PDB codes
-  - [ ] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
-  - [ ] Implement the pairwise aln in python
-2. Obtain the PDB model of the target protein: ALE
-  INPUT: PDB codes
-  OUTPUT: PDB files
-  - [ ] Obtain PDB from alpha-fold is the sequence is not known
-  - [ ] Obtain PDB from database if the protein is known
-=======
   - INPUT: Fasta Sequence of the target protein
   - OUTPUT: PDB codes (list) and chains of the pdbs (list)
-  - [ ] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
-  - [ ] Implement the pairwise aln in python
+  - [X] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
+  - [X] Implement the pairwise aln in python
+  - [ ] implement the downloading of the databases to perform the searches
+  - [ ] Mirar comentarios en la función `get_pbd_homologs`.
 2. Obtain the PDB model of the target protein: ALE
   - INPUT: PDB codes
   - OUTPUT: PDB fasta sequences
   - [X] Download pdb files
   - [X] Obtain fasta sequences
-  - [ ] Format of fasta sequences
->>>>>>> 147278e93b65204e1a4510a3da36ccd34f1ad648
+  - [X] Format of fasta sequences
 3. With these candidates, obtain regions of similarity: IRIA
-  - [ ] Decide which multiple **STRUCTURAL** aln (MSA) approach to use
-  - [ ] Implement the MSA in python
-4. Obtain b-factors of regions of similarity (implement in python):
-  - [ ] Identify regions of similarity in the MSA
+  - [X] Decide which multiple aln (MSA) approach to use --> SEQUENCE aln with T-coffee
+  - [X] Implement the MSA in python
+4. Obtain b-factors of regions of similarity (implement in python): ALE
+  - [X] Identify regions of similarity in the MSA
   - [ ] Take the b-factor of this regions of similarity:
-    - If there there is only one candidate sharing this region: take the alfa-carbon b-factor of the aminoacids
-    - If there is more than one candidate sharing this region: take the mean of the alfa-carbon b-factor of the aminoacid
-  - [ ] Standaritze values
+    - REVISAR. If there there is only one candidate sharing this region: take the alfa-carbon b-factor of the aminoacids
+    - OK. If there is more than one candidate sharing this region: take the mean of the alfa-carbon b-factor of the aminoacid
+  - [X] Standaritze values
+  - Weight the b-factor values based on the surrounding b-factor values.
 5. Compute values based on:
   - [ ] Structural restraints.
   - [ ] Hidrofobicity.
