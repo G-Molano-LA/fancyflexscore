@@ -43,9 +43,16 @@ def get_pdb_homologs(input_file):
                 protein_codes = [x.lower() for x in protein_codes]
                 protein_chains = list(hits_dict.values())[:3]
             else:
-                psiblast_uniprot_cline = NcbipsiblastCommandline(db = '../db/UNIPROTdb', query = input_file, evalue =  1 , out = "psiblast_uniprot_results.xml", outfmt = 5, out_pssm = "psiblast_uniprot3.pssm", num_iterations = 3)
+                psiblast_uniprot_cline = NcbipsiblastCommandline(
+                    db = '../db/UNIPROTdb', query = input_file, evalue =  1 ,
+                    out = "psiblast_uniprot_results.xml", outfmt = 5,
+                    out_pssm = "psiblast_uniprot3.pssm", num_iterations = 3
+                    )
                 stdout_psi_uni, stderr_psi_uni = psiblast_uniprot_cline()
-                psiblast_pdb_cline = NcbipsiblastCommandline(db = '../db/PDBdb', out = "psiblast_pdb_results.xml", outfmt = 5, in_pssm = "psiblast_uniprot3.pssm")
+                psiblast_pdb_cline = NcbipsiblastCommandline(
+                    db = '../db/PDBdb', out = "psiblast_pdb_results.xml", outfmt = 5,
+                    in_pssm = "psiblast_uniprot3.pssm"
+                    )
                 stdout_psi_pdb, stderr_psi_pdb = psiblast_pdb_cline()
                 PSI_E_VALUE_THRESH = 1e-4
                 for psirecord in NCBIXML.parse(open("psiblast_pdb_results.xml", "r")):
@@ -108,7 +115,7 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
 def msa(pdb_seqs_filename):
     """Perform multiple sequence alignment with Tcoffe
 
-    Return:Dictionary containing the position (key) and symbol (value) of aminoacid similarities
+    Return: multiple Aligment object
     """
 
     # install t-coffe: https://www.tcoffee.org/Projects/tcoffee/documentation/index.html#document-tcoffee_installation
@@ -127,12 +134,6 @@ def msa(pdb_seqs_filename):
     msa_obj             = AlignIO.read(msa_outfile, "clustal")
 
     return msa_obj
-    # Obtain the annotation of clustalw format
-    msa_annotation  = clustal_annotations(msa_obj)
-
-
-
-    return similarities
 
 def clustal_annotations(msa_obj):
     """Obtain all the residue positions that are identifical in the alignment.
@@ -142,30 +143,41 @@ def clustal_annotations(msa_obj):
         '.'  -- semi-conserved substitutions have been observed
         ' '  -- no match.
 
-    Return: list containing the residues positions that are identical
+    Return:
+        - List of list, containing the positions of similarity for each structure
+        - List containing the residue length associated to the pbd sequence used in the alignment
     """
     # Get annotations of clustalw aln
     annot = msa_obj.column_annotations['clustal_consensus']
+
     # Obtain length of aln
     msa_len = msa_obj.get_alignment_length()
-    # Obtain ref sequence
-    msa_ref_seq = msa_obj[0].seq
+    # all then position of similarities for each protein
+    all_sim = list()
+    all_aln_res = list()
 
-    # PDB residue index
-    pdb_res_len = -1
-    # Similarities: list of tuples (residue, pdb_position)
-    similarities = list()
+    for obj in msa_obj:
+        # Obtain  sequence
+        msa_seq = obj.seq
+        # PDB residue index
+        aln_res = -1
+        # similarities for the sequence
+        sim = list()
 
-    for i in range(msa_len):
-        # Missing residues (X) or gaps (-) are ignored
-        if msa_ref_seq[i] != "X" and msa_ref_seq[i] != "-":
-            pdb_res_len += 1
-        if annot[i] == "*":
-            similarities.append(pdb_res_len)
-    return similarities, pdb_res_len
+        for i in range(msa_len):
+            # Missing residues (X) or gaps (-) are ignored
+            if msa_seq[i] != "X" and msa_seq[i] != "-":
+                aln_res += 1
+            if annot[i] == "*":
+                sim.append(aln_res)
+
+        all_sim.append(sim)
+        all_aln_res.append(aln_res)
+
+    return all_sim, all_aln_res
 
 
-def get_bfactors(pdb_file, pdb_code, pdb_res_len):
+def get_bfactors(pdb_file, pdb_code, pdb_chain, aln_res):
     """Obtain the b-factors of c-alpha atoms for all the residues involved in the alignment
 
     Return: list of b-factors
@@ -177,12 +189,15 @@ def get_bfactors(pdb_file, pdb_code, pdb_res_len):
         parser = PDBParser()
         structure = parser.get_structure(pdb_code, fh)
 
+    for chain in structure.get_chains():
+        if chain.id == pdb_chain:
+            chain_struct = chain
     # Get the residues involved in the alignment
-    residues = [res for res in structure.get_residues()]
+    residues = [res for res in chain_struct.get_residues()]
 
     # Get the bfactors of the pdb residues involved in the alignment
     bfactors = [residues[i].child_dict['CA'].get_bfactor() for i in range(len(residues))
-                if i <= pdb_res_len]
+                if i <= aln_res]
     return bfactors
 
 
@@ -209,10 +224,23 @@ if __name__ == '__main__':
     # Perfom Multiple Sequence Aligment
     msa_obj= msa(pdb_seqs_filename)
     # Obtain position of identifical residues & the length of the pdb residues
-    similarities, pdb_res_len = clustal_annotations(msa_obj)
-    # Obtain b-factors for all the residues of the structure of reference
-    bfactors      = get_bfactors("structures/pdb1xb7.ent", protein_codes[0], pdb_res_len)
+    all_sim, all_aln_res = clustal_annotations(msa_obj)
 
-    norm_bfactors = normalize_bfactor(bfactors)
-    # B-factor of regions of similarities
-    sim_bfactor = [norm_bfactors[i] for i in range(len(norm_bfactors)) if i in similarities]
+    # Obtain the mean of normalized b-factors for residues in regions with similarities
+    ## Get the b-factors for all residues and normalize
+    all_bfactors = [get_bfactors(prot[0], prot[1], prot[2], prot[3]) for prot in
+                    list(zip(pdb_outfiles,protein_codes, protein_chains, all_aln_res))]
+    all_norm_bfactors = [normalize_bfactor(bfactors) for bfactors in all_bfactors]
+
+    ## Get the b-factor only for regions of similarity
+    all_sim_bfactors = list()
+
+    for val in list(zip(all_norm_bfactors, all_sim)):
+        norm_bfactors = val[0]
+        similarities  = val[1]
+
+        sim_bfactors = [norm_bfactors[i] for i in similarities]
+        all_sim_bfactors.append(sim_bfactors)
+
+    ## Compute the mean
+    final_bfactors = [sum(sim_bfactors) for sim_bfactors in zip(*all_sim_bfactors)]
