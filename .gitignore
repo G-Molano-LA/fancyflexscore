@@ -1,15 +1,6 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 147278e93b65204e1a4510a3da36ccd34f1ad648
 # MacOS DS
 .DS_Store
 
 # Directory with the virtual environment dependencies
-<<<<<<< HEAD
->>>>>>> 2822201dee4ce6f80029ea59cf76e1923adafc88
-=======
->>>>>>> 147278e93b65204e1a4510a3da36ccd34f1ad648
 structural_py/
 db/
