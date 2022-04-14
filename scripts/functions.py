@@ -20,23 +20,22 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
     logging.info("Obtaining PDB files for candidate and target proteins")
 
     ## Get PDBs
-    r = PDBList() # Object instance
+    r = PDBList()  # Object instance
     r.download_pdb_files(pdb_codes = pdb_codes , file_format = "pdb",
-                        pdir = "structures/", overwrite=True) # creates the directory if do not exists
+                         pdir = "structures/", overwrite=True)   # creates the directory if do not exists
 
     # Save the pdb sequences into a file
     outfile = "structures/pdb_sequences.fa"
     with open(outfile, "w") as out:
-        sequence_records = []
         for i in range(len(pdb_outfiles)):
-            with open (pdb_outfiles[i], 'r') as pdb_fh:
+            with open(pdb_outfiles[i], 'r') as pdb_fh:
                 for record in SeqIO.parse(pdb_fh, 'pdb-atom'):
                     if f":{chains[i]}" in record.id:
-                            fasta_id = f">{record.id}"
-                            fasta_seq = record.seq
+                        fasta_id = f">{record.id}"
+                        fasta_seq = record.seq
 
-                            print(fasta_id, file = out)
-                            print(fasta_seq, file = out)
+                        print(fasta_id, file = out)
+                        print(fasta_seq, file = out)
 
         return outfile
 
@@ -78,7 +77,11 @@ def msa(pdb_seqs_filename):
     return similarities
 
 def read_clustal_annotations(msa_outfile):
-    """Obtain the annotations ('*', '.' , ':', ' ') of clustalw alignment format
+    """Obtain the annotations ('*', '.' , ':', ' ') of clustalw alignment format.
+        '*'  -- all residues or nucleotides in that column are identical
+        ':'  -- conserved substitutions have been observed
+        '.'  -- semi-conserved substitutions have been observed
+        ' '  -- no match.
 
     Return: annotations
     """
@@ -89,7 +92,7 @@ def read_clustal_annotations(msa_outfile):
             if line.isspace():
                 pass
             if '*' in line:
-                line = line.strip()
+                line = line.strip("\n")
                 annotation_line += line
         return annotation_line
 
@@ -113,8 +116,8 @@ def get_bfactors(pdb_file, pdb_code, similarities):
     return bfactor
 
 if __name__ == '__main__':
-    protein_codes = ["1a3n", "2dhb"] # PDB codes in lowercasese
-    protein_chains = ["A", "A"]
+    protein_codes = ["1xb7", "2ewp", "3d24"] # PDB codes in lowercasese
+    protein_chains = ["A", "E", "A"]
     # Output format of pdb_files
     pdb_outfiles = [f"structures/pdb{code}.ent" for code in protein_codes]
 
@@ -122,4 +125,4 @@ if __name__ == '__main__':
     pdb_seqs_filename = get_pdb_sequences(protein_codes, protein_chains, pdb_outfiles)
     similarities= msa(pdb_seqs_filename)
 
-    bfactor = [get_bfactors(pdb_file, pdb_code, similarities) for pdb_file,pdb_code in zip(pdb_outfiles, protein_codes)]
+    #bfactor = [get_bfactors(pdb_file, pdb_code, similarities) for pdb_file,pdb_code in zip(pdb_outfiles, protein_codes)]
