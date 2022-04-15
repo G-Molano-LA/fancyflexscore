@@ -2,18 +2,18 @@
 def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
     """Obtain PDB codes and chains from protein homologs of the query protein
 
-    This function conducts a BLASTP against the PDB database locally and retrieves the first 3 unique
+    This function conducts a BLASTP against the PDB database locally and retrieves the unique
     hits with their respective chains. Proteins with homology in several chains are not considered unique
     and only the first chain is kept.
-    In case less than 3 hits, with a lower threshold than 1e-20, are found two psi-blasts are conducted. First,
+    In case less than 7 hits, with a lower threshold than 1e-20, are found two psi-blasts are conducted. First,
     against the Uniprot database to obtain the 3rd iteration PSSM and then against the PDB database using the
-    obtained PSSM. This is only conducted to fill the three homologs in case not enough homologs are obtained
+    obtained PSSM. This is only conducted to fill the list with remote homologs in case not enough homologs are obtained
     with the BLASTP.
 
     Input: FASTA file with the query protein sequence
 
-    Return: List of protein codes and list of protein chains of the three homologs.
-    [ ] Maybe, we can return the whole list of hits, in order to be able to access to it later
+    Return: List of protein codes, list of protein chains of the homologs and dictionary with the proteins as keys and 
+    chains as values
     """
 
     # Python modules
@@ -26,12 +26,10 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
     # Checking if the input is a file or a sequence:
     if os.path.isfile(input_file):
         # BLASTP
-        blastp_cline = NcbiblastpCommandline(query = input_file, db = "../db/PDBdb", outfmt = 5, out = "results.xml")
+        blastp_cline = NcbiblastpCommandline(query = input_file, db = "db/PDBdb", outfmt = 5, out = "results.xml")
         stdout, stderr = blastp_cline()
 
         # Parse the results file
-        # [?] Poner e-value threshold como argumento modificable del usuario
-        # [?] Porque esta en mayúscula?
         E_VALUE_THRESH = 1e-20
         hits_dict = {}
         for record in NCBIXML.parse(open("results.xml", "r")):
@@ -40,24 +38,21 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
                     for hsp in align.hsps:
                         if hsp.expect < E_VALUE_THRESH:
                             hits_dict.setdefault(align.title[4:8], align.title[9])
-
-        # Obtain just the first three unique hits
-        if len(hits_dict) >= 3:
-            protein_codes = list(hits_dict.keys())[:3]
-            protein_codes = [x.lower() for x in protein_codes]
-            protein_chains = list(hits_dict.values())[:3]
-        else:
+        protein_codes = list(hits_dict.keys())
+        protein_codes = [x.lower() for x in protein_codes]
+        protein_chains = list(hits_dict.values())
+            
+        if len(hits_dict) < 7: # arbitrary value to ensure we have an enough number of proteins
+            print("Less than 7 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
             # PSIBLAST
-            # [?] Poner e-value threshold como argumento modificable del usuario
-            # [?] Porque esta en mayúscula?
             psiblast_uniprot_cline = NcbipsiblastCommandline(
-                db = '../db/UNIPROTdb', query = input_file, evalue =  1 ,
+                db = 'db/UNIPROTdb', query = input_file, evalue =  1 ,
                 out = "psiblast_uniprot_results.xml", outfmt = 5,
                 out_pssm = "psiblast_uniprot3.pssm", num_iterations = 3
                 )
             stdout_psi_uni, stderr_psi_uni = psiblast_uniprot_cline()
             psiblast_pdb_cline = NcbipsiblastCommandline(
-                db = '../db/PDBdb', out = "psiblast_pdb_results.xml", outfmt = 5,
+                db = 'db/PDBdb', out = "psiblast_pdb_results.xml", outfmt = 5,
                 in_pssm = "psiblast_uniprot3.pssm"
                 )
             stdout_psi_pdb, stderr_psi_pdb = psiblast_pdb_cline()
@@ -68,17 +63,71 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
                         for hsp in psialign.hsps:
                             if hsp.expect < PSI_E_VALUE_THRESH:
                                 hits_dict.setdefault(psialign.title[4:8], psialign.title[9])
-                if len(hits_dict) == 3:
+                if len(hits_dict) == 7:
                     break
-            protein_codes = list(hits_dict.keys())[:3]
+            protein_codes = list(hits_dict.keys())
             protein_codes = [x.lower() for x in protein_codes]
-            protein_chains = list(hits_dict.values())[:3]
-
-        return protein_codes, protein_chains
+            protein_chains = list(hits_dict.values())
+            
+            return protein_codes, protein_chains, hits_dict
+        
+        else:
+            return protein_codes, protein_chains, hits_dict
 
     else:
         print("Sorry, introduce a valid input")
 
+def download_pdb_files(pdb_codes_list):
+    """
+    Downloads a list of PDB files and stores them in the structures directory
+
+    Input: List of PDB codes of the proteins
+
+    Return: Directory called "structures" with the PDB files in it in the format: "structures/pdb{code}.ent"
+    """
+    from Bio.PDB.PDBList import PDBList
+    ## Get PDB files
+    r = PDBList()  # Object instance
+    r.download_pdb_files(pdb_codes = pdb_codes_list , file_format = "pdb",
+                            pdir = "structures/", overwrite=True)   # creates the directory if do not exists
+
+def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
+    # Needs the protein_codes and hits_dict from the get_pdb_homologs function
+    """
+    Takes the files from the "structures/" directory, parses them to obtain the resolution and returns the three
+    hits with the highest e-value and a resolution higher than 2 Angstroms.
+
+    Input: List of protein codes from the BLAST and dictionary of the chains for each hit. Optional: Resolution
+
+    Return: List of three protein PDB codes and their respective chains
+    """
+    from Bio.PDB import PDBParser
+    import pathlib
+
+    res_dict = {}
+    for pdb_file in pathlib.Path("structures/").iterdir():
+        # Read pdb file
+        with open(pdb_file, "r") as fh:
+            parser = PDBParser(QUIET=True)
+            structure = parser.get_structure(fh.name[14:18], fh)
+            res_dict[fh.name[14:18]] = structure.header['resolution']
+    # Order the dictionary according to the highest e-value order
+    ordered_res_dict = {k: res_dict[k] for k in protein_codes}
+
+    # Now, we will keep just the three hits with the highest e-value and a resolution lower than 2
+    final_proteins = []
+    final_chains = []
+
+    for key in ordered_res_dict:
+        if len(final_proteins) == 3:
+            break
+        elif ordered_res_dict[key] <= resolution:
+            final_proteins.append(key)
+
+    for code in final_proteins:
+        final_chains.append(hits_dict[code])
+
+    return final_proteins, final_chains
 
 def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
     """Obtain PDB files and fasta sequences for protein homologues
