@@ -254,4 +254,4 @@ if __name__ == '__main__':
         all_sim_bfactors.append(sim_bfactors)
 
     ## Compute the mean
-    final_bfactors = [sum(sim_bfactors) for sim_bfactors in zip(*all_sim_bfactors)]
+    final_bfactors = [sum(sim_bfactors)/len(all_sim_bfactors) for sim_bfactors in zip(*all_sim_bfactors)]
