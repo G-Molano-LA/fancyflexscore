@@ -1,5 +1,6 @@
 # MacOS DS
 .DS_Store
+.cache
 
 # Directory with the virtual environment dependencies
 structural_py/
