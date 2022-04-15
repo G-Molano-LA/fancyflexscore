@@ -13,6 +13,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
     Input: FASTA file with the query protein sequence
 
     Return: List of protein codes and list of protein chains of the three homologs.
+    [ ] Maybe, we can return the whole list of hits, in order to be able to access to it later
     """
 
     # Python modules
@@ -120,6 +121,7 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
 
 def msa(pdb_seqs_filename):
     """Perform multiple sequence alignment with Tcoffe
+    [ ] Include the input file
 
     Return: multiple Aligment object
     """
@@ -195,6 +197,8 @@ def get_bfactors(pdb_file, pdb_code, pdb_chain, aln_res):
         parser = PDBParser()
         structure = parser.get_structure(pdb_code, fh)
 
+    resolution = structure.header['resolution']
+
     for chain in structure.get_chains():
         if chain.id == pdb_chain:
             chain_struct = chain
@@ -234,8 +238,9 @@ if __name__ == '__main__':
 
     # Obtain the mean of normalized b-factors for residues in regions with similarities
     ## Get the b-factors for all residues and normalize
+
     all_bfactors = [get_bfactors(prot[0], prot[1], prot[2], prot[3]) for prot in
-                    list(zip(pdb_outfiles,protein_codes, protein_chains, all_aln_res))]
+                     list(zip(pdb_outfiles,protein_codes, protein_chains, all_aln_res))]
     all_norm_bfactors = [normalize_bfactor(bfactors) for bfactors in all_bfactors]
 
     ## Get the b-factor only for regions of similarity
