@@ -11,7 +11,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
 
     Input: FASTA file with the query protein sequence
 
-    Return: List of protein codes, list of protein chains of the homologs and dictionary with the proteins as keys and 
+    Return: List of protein codes, list of protein chains of the homologs and dictionary with the proteins as keys and
     chains as values
     """
 
@@ -40,7 +40,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
         protein_codes = list(hits_dict.keys())
         protein_codes = [x.lower() for x in protein_codes]
         protein_chains = list(hits_dict.values())
-            
+
         if len(hits_dict) < 7: # arbitrary value to ensure we have an enough number of proteins
             print("Less than 7 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
             # PSIBLAST
@@ -67,9 +67,9 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
             protein_codes = list(hits_dict.keys())
             protein_codes = [x.lower() for x in protein_codes]
             protein_chains = list(hits_dict.values())
-            
+
             return protein_codes, protein_chains, hits_dict
-        
+
         else:
             return protein_codes, protein_chains, hits_dict
 
@@ -77,20 +77,54 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
         print("Sorry, introduce a valid input")
 
 def download_pdb_files(pdb_codes_list):
-    """
-    Downloads a list of PDB files and stores them in the structures directory
+    """Downloads a list of PDB files and stores them in the structures directory
 
     Input: List of PDB codes of the proteins
 
     Return: Directory called "structures" with the PDB files in it in the format: "structures/pdb{code}.ent"
     """
     from Bio.PDB.PDBList import PDBList
+    ## Output files
+    pdb_outfiles = [f"structures/pdb{code}.pdb" for code in pdb_codes_list]
+
     ## Get PDB files
     r = PDBList()  # Object instance
     r.download_pdb_files(pdb_codes = pdb_codes_list , file_format = "pdb",
-                            pdir = "structures/", overwrite=True)   # creates the directory if do not exists
+                        pdir = "structures/", overwrite=True)   # creates the directory if do not exists
 
-def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
+    return pdb_outfiles
+
+def get_pdb_structure(pdb_file, pdb_code):
+    """ Parse pdb structure
+    Return: structure object
+    """
+    from Bio.PDB import PDBParser
+
+    # Read pdb file
+    with open(pdb_file, "r") as fh:
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure(pdb_code, fh)
+
+    return structure
+
+def extract_fasta_sequence(fasta_file):
+    """Parse FASTA file
+
+    Return: protein id and protein sequence
+    """
+    from Bio import SeqIO
+
+    with open(fasta_file, 'r') as fasta:
+        for i, record in enumerate(SeqIO.parse(fasta, 'pdb-atom')):
+            if i == 1:
+                raise OSError("The FASTA input file must contain one unique record")
+
+            prot_id = record.id
+            prot_seq = record.seq
+
+    return prot_id, prot_seq
+
+def pdb_quality_filter(pdb_files, protein_codes, hits_dict, resolution = 2):
     # Needs the protein_codes and hits_dict from the get_pdb_homologs function
     """
     Takes the files from the "structures/" directory, parses them to obtain the resolution and returns the three
@@ -100,46 +134,39 @@ def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
 
     Return: List of three protein PDB codes and their respective chains
     """
-    from Bio.PDB import PDBParser
-    import pathlib
-
     res_dict = {}
-    for pdb_file in pathlib.Path("structures/").iterdir():
+    for val in list(zip(pdb_files, protein_codes)):
+        pdb_file = val[0]
+        prot_code = val[1]
+
         # Read pdb file
-        with open(pdb_file, "r") as fh:
-            parser = PDBParser(QUIET=True)
-            structure = parser.get_structure(fh.name[14:18], fh)
-            res_dict[fh.name[14:18]] = structure.header['resolution']
+        structure = get_pdb_structure(pdb_file, prot_code)
+        res_dict[prot_code] = structure.header['resolution']
+
     # Order the dictionary according to the highest e-value order
     ordered_res_dict = {k: res_dict[k] for k in protein_codes}
 
     # Now, we will keep just the three hits with the highest e-value and a resolution lower than 2
-    final_proteins = []
+    final_protein_codes = []
     final_chains = []
 
     for key in ordered_res_dict:
-        if len(final_proteins) == 3:
+        if len(final_protein_codes) == 3:
             break
         elif ordered_res_dict[key] <= resolution:
-            final_proteins.append(key)
+            final_protein_codes.append(key)
 
-    for code in final_proteins:
+    for code in final_protein_codes:
         final_chains.append(hits_dict[code])
 
-    return final_proteins, final_chains
+    return final_protein_codes, final_chains
 
-def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
-    """Obtain PDB files and fasta sequences for protein homologues
-
-    The pdb files and fasta sequences are stores in 'structures' directory.
-    Generates a FASTA file containningg all the sequences of the pdb structures.
-
-    PDB generated files: f"structures/pdb{code}.ent"
+def get_aln_sequences(input_file, pdb_outfiles, pdb_codes, chains):
+    """Construct a FASTA file containing the sequences of the target protein and its pdb homologs
 
     Return: Fasta filename
     """
 
-    from Bio.PDB.PDBList import PDBList   # to get PDB file from PDB server
     from Bio import SeqIO
     ## To track events
     import logging
@@ -149,16 +176,18 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
     # 1. Obtain PDB files for candidates and target
     logging.info("Obtaining PDB files for candidate and target proteins")
 
-    ## Get PDBs
-    r = PDBList(verbose=True)  # Object instance
-    r.download_pdb_files(pdb_codes = pdb_codes , file_format = "pdb",
-                         pdir = "structures/", overwrite=True)   # creates the directory if do not exists
 
-    # Save the pdb sequences into a file
-    outfile = "structures/pdb_sequences.fa"
+    # Save the fasta_sequences
+    fasta_outfile = "structures/pdb_sequences.fa"
 
     with warnings.catch_warnings(record=True) as caught_warnings:
-        with open(outfile, "w") as out:
+        with open(fasta_outfile, "w") as out:
+            # attach target sequence
+            prot_id, prot_seq = extract_fasta_sequence(input_file)
+            print(prot_id, file = out)
+            print(prot_seq, file = out)
+
+            # attach sequence from pdb homologs
             for i in range(len(pdb_outfiles)):
                 with open(pdb_outfiles[i], 'r') as pdb_fh:
                     for record in SeqIO.parse(pdb_fh, 'pdb-atom'):
@@ -169,11 +198,10 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
                             print(fasta_id, file = out)
                             print(fasta_seq, file = out)
 
-        return outfile
+        return fasta_outfile
 
 def msa(pdb_seqs_filename):
     """Perform multiple sequence alignment with Tcoffe
-    [ ] Include the input file
 
     Return: multiple Aligment object
     """
@@ -191,7 +219,7 @@ def msa(pdb_seqs_filename):
     tcoffee_cline()
 
     # Read the MSA
-    msa_obj             = AlignIO.read(msa_outfile, "clustal")
+    msa_obj = AlignIO.read(msa_outfile, "clustal")
 
     return msa_obj
 
@@ -242,14 +270,9 @@ def get_bfactors(pdb_file, pdb_code, pdb_chain, aln_res):
 
     Return: list of b-factors
     """
-    from Bio.PDB import PDBParser
 
     # Read pdb file
-    with open(pdb_file, "r") as fh:
-        parser = PDBParser(QUIET=True)
-        structure = parser.get_structure(pdb_code, fh)
-
-    resolution = structure.header['resolution']
+    structure = get_pdb_structure(pdb_file, pdb_code)
 
     for chain in structure.get_chains():
         if chain.id == pdb_chain:
@@ -339,14 +362,8 @@ def get_bfactors2(pdb_file, pdb_code, pdb_chain, all_sim, aln_res):
 
     Return: list of b-factors
     """
-    from Bio.PDB import PDBParser
-
     # Read pdb file
-    with open(pdb_file, "r") as fh:
-        parser = PDBParser()
-        structure = parser.get_structure(pdb_code, fh)
-
-    resolution = structure.header['resolution']
+    structure = get_pdb_structure(pdb_file, pdb_code)
 
     for chain in structure.get_chains():
         if chain.id == pdb_chain:
@@ -443,15 +460,12 @@ def get_sstructure(pdb_file, pdb_code, prot_chain):
 
     Return: sequence and sstructure
     """
-    from Bio.PDB import PDBParser
     from Bio.PDB.DSSP import DSSP
 
     # Parse PDB file and execute DSSP
-    with open(pdb_file, "r") as fh:
-        parser = PDBParser(QUIET=True)
-        structure = parser.get_structure(pdb_code, fh)
-        model = structure[0]
-        dssp = DSSP(model, pdb_file,  dssp='mkdssp')
+    structure = get_pdb_structure(pdb_file, pdb_code)
+    model = structure[0]
+    dssp = DSSP(model, pdb_file,  dssp='mkdssp')
 
     # Retrieve the secondary structure from dssp results
     sstructure = ''
@@ -470,3 +484,24 @@ def get_sstructure(pdb_file, pdb_code, prot_chain):
     sstructure = sstructure.replace('B', 'E')
 
     return sstructure
+
+def get_hydrophobicity(fasta_file):
+    """
+    Calculates the hydrophobicity score for each aminoacid and for the global protein (GRAVY)
+
+    Input: FASTA file with the sequence
+
+    Return: List of scores per aminoacid and GRAVY score
+    """
+    from Bio.SeqUtils.ProtParam import ProteinAnalysis
+    from Bio.SeqUtils.ProtParam import ProtParamData
+
+    # Parse Fasta File
+    prot_id, prot_seq = extract_fasta_sequence(fasta_file)
+
+    # Obtain hydrophobicity scores
+    X = ProteinAnalysis(prot_seq)
+    hydroph_scores_aa = X.protein_scale(window=9, param_dict=ProtParamData.kd)
+    gravy = sum(hydroph_scores_aa)/len(prot_seq)
+
+    return hydroph_scores_aa, gravy

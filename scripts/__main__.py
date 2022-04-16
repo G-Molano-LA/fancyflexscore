@@ -1,15 +1,71 @@
-from functions import *
 
+from functions import *
+import argparse
 # What is this files? https://stackoverflow.com/questions/4042905/what-is-main-py
 
+################################################################################
+## Command line arguments
+################################################################################
+def is_file(string):
+    """Check if the input provided is a file
+    """
+    import os
 
-protein_codes = ["1xb7", "2ewp", "3d24"] # PDB codes in lowercasese
-protein_chains = ["A", "E", "A"]
-# Output format of pdb_files
-pdb_outfiles = [f"structures/pdb{code}.ent" for code in protein_codes]
+    # Check the extension of the file
+    if string.endswith("fa") or string.endswith("fasta"):
+        pass
+    else:
+        msg = f"{string} is has not a valid input_file format (.fa/.fasta)"
+        raise arg.parse.ArgumentTypeError(msg)
 
-# Get PDB files
-pdb_seqs_filename = get_pdb_sequences(protein_codes, protein_chains, pdb_outfiles)
+    if not os.path.isfile(string):
+        msg = f"{string} is not an existing input file"
+        raise arg.parse.ArgumentTypeError(msg)
+
+parser = argparse.ArgumentParser(description=
+    "Flexign provides a flexibility score given a protein sequence or a uniprot identifier. It can also take a protein family from which the consensus sequence is retrieved and used as input")
+
+# Input argument
+parser.add_argument('-i', '--input', required = True,
+                    type = is_file,
+                    dest = "infile",
+                    action = "store",
+                    default = None,
+                    help = "Input a FASTA file")
+
+# Output argument
+parser.add_argument('-o', '--output', required = True,
+                    dest = "outfile",
+                    action = "store",
+                    default = "flexign_score_output.txt",
+                    help = "Output file with the flexibility score and a graphic representation of the flexibility by aminoacid")
+
+# Verbose argument
+parser.add_argument('-v', '--verbose',
+                    dest="verbose",
+                    action="store_true",
+                    default=False,
+                    help="Select this option to have a follow up of the program")
+
+options = parser.parse_args()
+
+input_file = options.infile
+output_file = options.outfile
+
+################################################################################
+## MAIN CODE
+################################################################################
+# Get Homologs
+protein_codes, protein_chains, hits_dict = get_pdb_homologs(input_file)
+# Download homologs
+pdb_outfiles = download_pdb_files(protein_codes)
+# Apply resolution quality filter
+final_protein_codes, final_chains = pdb_quality_filter(pdb_outfiles, protein_codes, hits_dict)
+# Download filtered homologs
+pdb_outfiles = download_pdb_files(final_protein_codes)
+
+# Get fasta sequences for multiple sesquence alignment
+pdb_seqs_filename = get_pdb_sequences(protein_codes, protein_chains)
 # Perfom Multiple Sequence Aligment
 msa_obj= msa(pdb_seqs_filename)
 # Obtain position of identifical residues & the length of the pdb residues
@@ -77,3 +133,7 @@ F1 = flexibility(all_sim_bfactors, window_size = 1)
 
 ## F scores normalized
 norm_flex_scores = scale_function(flex_scores)
+
+# Get Hidrobicity
+
+hydroph_scores_aa, gravy = get_hydrophobicity(input_file)
