@@ -94,27 +94,31 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
     from Bio import SeqIO
     ## To track events
     import logging
+    ## To hide warnings
+    import warnings
 
     # 1. Obtain PDB files for candidates and target
     logging.info("Obtaining PDB files for candidate and target proteins")
 
     ## Get PDBs
-    r = PDBList()  # Object instance
+    r = PDBList(verbose=True)  # Object instance
     r.download_pdb_files(pdb_codes = pdb_codes , file_format = "pdb",
                          pdir = "structures/", overwrite=True)   # creates the directory if do not exists
 
     # Save the pdb sequences into a file
     outfile = "structures/pdb_sequences.fa"
-    with open(outfile, "w") as out:
-        for i in range(len(pdb_outfiles)):
-            with open(pdb_outfiles[i], 'r') as pdb_fh:
-                for record in SeqIO.parse(pdb_fh, 'pdb-atom'):
-                    if f":{chains[i]}" in record.id:
-                        fasta_id = f">{record.id}"
-                        fasta_seq = record.seq
 
-                        print(fasta_id, file = out)
-                        print(fasta_seq, file = out)
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        with open(outfile, "w") as out:
+            for i in range(len(pdb_outfiles)):
+                with open(pdb_outfiles[i], 'r') as pdb_fh:
+                    for record in SeqIO.parse(pdb_fh, 'pdb-atom'):
+                        if f":{chains[i]}" in record.id:
+                            fasta_id = f">{record.id}"
+                            fasta_seq = record.seq
+
+                            print(fasta_id, file = out)
+                            print(fasta_seq, file = out)
 
         return outfile
 
@@ -193,7 +197,7 @@ def get_bfactors(pdb_file, pdb_code, pdb_chain, aln_res):
 
     # Read pdb file
     with open(pdb_file, "r") as fh:
-        parser = PDBParser()
+        parser = PDBParser(QUIET=True)
         structure = parser.get_structure(pdb_code, fh)
 
     resolution = structure.header['resolution']
@@ -364,53 +368,56 @@ def scale_function(all_aa_flex):
     all_aa_flex_norm = list(map(lambda i:(i - min(all_aa_flex))/(max(all_aa_flex) - min(all_aa_flex)), all_aa_flex))
     return all_aa_flex_norm
 
+def get_sstructure(pdb_file, pdb_code, prot_chain):
+    """Calculate the secondary structure and accesibility by using DSSP program
+        - Needs to have dssp installed (https://github.com/cmbi/dssp)
+            - requirements (sudo apt-get install libboost-all-dev)
+        - Needs pdb extension
 
-if __name__ == '__main__':
-    protein_codes = ["1xb7", "2ewp", "3d24"] # PDB codes in lowercasese
-    protein_chains = ["A", "E", "A"]
-    # Output format of pdb_files
-    pdb_outfiles = [f"structures/pdb{code}.ent" for code in protein_codes]
 
-    # Get PDB files
-    pdb_seqs_filename = get_pdb_sequences(protein_codes, protein_chains, pdb_outfiles)
-    # Perfom Multiple Sequence Aligment
-    msa_obj= msa(pdb_seqs_filename)
-    # Obtain position of identifical residues & the length of the pdb residues
-    all_sim, all_aln_res = clustal_annotations(msa_obj)
+        The DSSP codes for secondary structure used here are:
+            =====     ====
+            Code      Structure
+            =====     ====
+             H        Alpha helix (4-12)
+             B        Isolated beta-bridge residue
+             E        Strand
+             G        3-10 helix
+             I        Pi helix
+             T        Turn
+             S        Bend
+             \-       None
+            =====     ====
 
-    # Obtain the mean of normalized b-factors for residues in regions with similarities
-    ## Get the b-factors for all residues and normalize
+        However, we will convert DSSP's 8-state assignments into 3-state:
+        [C - coil, E - extended (beta-strand), H - helix].
 
-    all_bfactors = [get_bfactors(prot[0], prot[1], prot[2], prot[3]) for prot in
-                     list(zip(pdb_outfiles,protein_codes, protein_chains, all_aln_res))]
-    all_norm_bfactors = [normalize_bfactor(bfactors) for bfactors in all_bfactors]
+    Return: sequence and sstructure
+    """
+    from Bio.PDB import PDBParser
+    from Bio.PDB.DSSP import DSSP
 
-    ## GEt get_residues
-    residues = [get_bfactors2(prot[0], prot[1], prot[2], prot[3], prot[4]) for prot in
-                     list(zip(pdb_outfiles,protein_codes, protein_chains, all_sim, all_aln_res))]
+    # Parse PDB file and execute DSSP
+    with open(pdb_file, "r") as fh:
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure(pdb_code, fh)
+        model = structure[0]
+        dssp = DSSP(model, pdb_file,  dssp='mkdssp')
 
-    ## Compute F score validation
-    r0 = []
-    for i in residues[0]:
-        r0.append(i.get_resname())
+    # Retrieve the secondary structure from dssp results
+    sstructure = ''
+    for i in range(len(dssp)):
+        a_key = list(dssp.keys())[i]
 
-    F5_val = flexibility_val(r0, window_size=5)
-    F1_cval = flexibility_val(r0, window_size=1)
+        if a_key[0] == prot_chain:
+            sstructure += dssp[a_key][2]
 
-    ## Get the b-factor only for regions of similarity
-    all_sim_bfactors = list()
+    # Convert 8-state to 3-state
+    sstructure = sstructure.replace('-', 'C')
+    sstructure = sstructure.replace('I', 'C')
+    sstructure = sstructure.replace('T', 'C')
+    sstructure = sstructure.replace('S', 'C')
+    sstructure = sstructure.replace('G', 'H')
+    sstructure = sstructure.replace('B', 'E')
 
-    for val in list(zip(all_norm_bfactors, all_sim)):
-        norm_bfactors = val[0]
-        similarities  = val[1]
-
-        sim_bfactors = [norm_bfactors[i] for i in similarities]
-        all_sim_bfactors.append(sim_bfactors)
-
-    ## Compute the F score
-    F5,flex_scores = flexibility(all_sim_bfactors, window_size = 5)
-    F3 = flexibility(all_sim_bfactors, window_size = 3)
-    F1 = flexibility(all_sim_bfactors, window_size = 1)
-
-    ## F scores normalized
-    norm_flex_scores = scale_function(flex_scores)
+    return sstructure
