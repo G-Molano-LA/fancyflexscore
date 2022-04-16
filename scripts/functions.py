@@ -95,6 +95,8 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
     from Bio import SeqIO
     ## To track events
     import logging
+    ## To hide warnings
+    import warnings
 
     # 1. Obtain PDB files for candidates and target
     logging.info("Obtaining PDB files for candidate and target proteins")
@@ -106,16 +108,18 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
 
     # Save the pdb sequences into a file
     outfile = "structures/pdb_sequences.fa"
-    with open(outfile, "w") as out:
-        for i in range(len(pdb_outfiles)):
-            with open(pdb_outfiles[i], 'r') as pdb_fh:
-                for record in SeqIO.parse(pdb_fh, 'pdb-atom'):
-                    if f":{chains[i]}" in record.id:
-                        fasta_id = f">{record.id}"
-                        fasta_seq = record.seq
 
-                        print(fasta_id, file = out)
-                        print(fasta_seq, file = out)
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        with open(outfile, "w") as out:
+            for i in range(len(pdb_outfiles)):
+                with open(pdb_outfiles[i], 'r') as pdb_fh:
+                    for record in SeqIO.parse(pdb_fh, 'pdb-atom'):
+                        if f":{chains[i]}" in record.id:
+                            fasta_id = f">{record.id}"
+                            fasta_seq = record.seq
+
+                            print(fasta_id, file = out)
+                            print(fasta_seq, file = out)
 
         return outfile
 
