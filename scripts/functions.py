@@ -1,4 +1,3 @@
-
 def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
     """Obtain PDB codes and chains from protein homologs of the query protein
 
@@ -157,7 +156,7 @@ def clustal_annotations(msa_obj):
 
     Return:
         - List of list, containing the positions of similarity for each structure
-        - List containing the residue length associated to the pbd sequence used in the alignment
+        - List containing the residue length (position?) associated to the pbd sequence used in the alignment
     """
     # Get annotations of clustalw aln
     annot = msa_obj.column_annotations['clustal_consensus']
@@ -214,11 +213,9 @@ def get_bfactors(pdb_file, pdb_code, pdb_chain, aln_res):
                 if i <= aln_res]
     return bfactors
 
-
-
 def normalize_bfactor(bfactor):
-    """Obtain the normalized b-factors of c-alpha atoms
-    FORMULA!!!
+    """Obtain the normalized b-factors of c-alpha atoms using the formula:
+        Bnorm = (B-mean(B))/stedev(B)
 
     Return: list of normalized b-factors
     """
@@ -226,6 +223,150 @@ def normalize_bfactor(bfactor):
     n_bfactor = list(map(lambda bf:
                 (bf-statistics.mean(bfactor))/statistics.stdev(bfactor), bfactor))
     return n_bfactor
+
+## Flexibility
+    # [?] Si tenemos b-values de nuestra proteina problema, yo aplicaría la fórmula
+    # directamente
+    # Si no los tenemos, he pensado en dos posibles approachs:
+    # 1 APPROACH
+    # Sobre lo que tenemos hecho hasta ahora, calcularia la media de los diferentes
+    # valores del b-factor de un aa, dados por las proteinas homologas. Luego,
+    # aplicaría la formula del paper https://www.sciencedirect.com/science/article/pii/S000527361300206X?via%3Dihub#bb0145
+    # del apartado 2.3.
+    # 2 APPROACH
+    # Pillar un homólogo de referencia directamente y usar los valores de flexibilada
+    # obtenidos en el paper https://onlinelibrary.wiley.com/doi/full/10.1110/ps.0236203
+    # (los resultados están en las Tablas 3 y 4, de hecho en el primer paper
+    # aplican la formula tomando como valores lambda los recogidos en este ultimo)
+
+# FIRST APPROACH
+def flexibility(all_sim_bfactors, window_size):
+    # [?] Valorar si incluir el scale_factor o no
+    """ This function will return a flexibility score for the total protein and a
+        list with the flexibility of each aa, taking into account how flexible or
+        rigid are the neighbourhoods of each amino acid.
+        We will define the flexibility index as a weighted average of amino acid
+        flexibility over wole residue chain of the protein. The neighbourhoods effect
+        is considered using a sliding hat-shaped window. The following formula is
+        implemented:
+         F_ws = scale_factor * sum(j=s,j=(L-(s-1))){lambda_j+sum(i=1,i=s-1){i/(s)*(lambda_{j-1}+lambda_{j+1})}}
+        where:
+        \lambda_j: mean of b-values for each set of 3(?) aminoacids
+        s = (ws+1)/2 ("start index")
+        L = length of the peptide (in this case aa of similarity regions)
+        ws = window_size
+        scale_factor = 1/(s(L-(ws-1)))
+
+        OUTPUT: protein flexibility score, list with the flexibility score of each aa
+    """
+    import statistics
+    # Compute the mean of b_values
+    mean_bvalues = [statistics.mean(i) for i in list(zip(all_sim_bfactors[0],all_sim_bfactors[1],all_sim_bfactors[2]))]
+    # Length of the peptidic chain
+    L = len(mean_bvalues)
+    s = int((window_size + 1)/2)
+    scale_factor = 1/s*(L-(window_size-1))
+    # Compute the FORMULA
+    all_aa_flex = []
+    for j in range(s,L-(s-1)):
+        k = 0
+        for i in range(1,s-1):
+            k = i/s*(mean_bvalues[j-1]+mean_bvalues[j+1])
+        #Flexibility score F of each aa
+        all_aa_flex.append(mean_bvalues[j-1] + k)
+
+
+    # Flexibility score F of the whole protein
+    # With scale factor
+    F = scale_factor*sum(all_aa_flex)
+    # Without scale factor
+    # F = sum(all_aa_flex)
+    return F, all_aa_flex
+
+## SECOND APPROACH
+
+def get_bfactors2(pdb_file, pdb_code, pdb_chain, all_sim, aln_res):
+    """Obtain the b-factors of c-alpha atoms for all the residues involved in the alignment
+
+    Return: list of b-factors
+    """
+    from Bio.PDB import PDBParser
+
+    # Read pdb file
+    with open(pdb_file, "r") as fh:
+        parser = PDBParser()
+        structure = parser.get_structure(pdb_code, fh)
+
+    resolution = structure.header['resolution']
+
+    for chain in structure.get_chains():
+        if chain.id == pdb_chain:
+            chain_struct = chain
+    # Get the residues involved in the alignment
+    residues = [res for res in chain_struct.get_residues()]
+
+    # Get the residues of the pdb residues involved in the alignment
+    residues_aln = [residues[i] for i in all_sim
+                if i <= aln_res]
+
+    return residues_aln
+
+def flexibility_val(res_names, window_size):
+    #[?] Decide which flex score from the paper (Table 3 or 4) to use
+    """ This function will return a flexibility score for the total protein and a
+        list with the flexibility of each aa, taking into account how flexible or
+        rigid are the neighbourhoods of each amino acid.
+        We will define the flexibility index as a weighted average of amino acid
+        flexibility over wole residue chain of the protein. The neighbourhoods effect
+        is considered using a sliding hat-shaped window. The following formula is
+        implemented:
+         F_ws = scale_factor * sum(j=s,j=(L-(s-1))){lambda_j+sum(i=1,i=s-1){i/(s)*(lambda_{j-1}+lambda_{j+1})}}
+        where:
+        \lambda_j: flexibility scores obtained by David K. Smith,Predrag Radivojac,Zoran Obradovic,A. Keith Dunker,Guang Zhu
+        s = (ws+1)/2 ("start index")
+        L = length of the peptide (in this case aa of similarity regions)
+        ws = window_size
+        scale_factor = 1/(s(L-(ws-1)))
+
+        OUTPUT: protein flexibility score, list with the flexibility score of each aa
+    """
+
+    # FLEXIBILITY scores
+    flex_scores = {'ALA': 0.717,'CYS': 0.668,'ASP': 0.921,'GLU': 0.963,'PHE': 0.599,'GLY': 0.843,'HIS': 0.754,'ILE': 0.632,'LYS': 0.912,'LEU': 0.681,'MET': 0.685,'ASN': 0.851,'PRO': 0.850,'GLN': 0.849,'ARG': 0.814,'SER': 0.840,'THR': 0.758,'VAL': 0.619,'TRP': 0.626,'TYR': 0.615}
+    flex_scores2 = {'ALA':-0.605,'CYS':-0.692,'ASP':-0.279,'GLU':-0.160,'PHE':-0.719,'GLY':-0.537,'HIS':-0.662,'ILE':-0.682,'LYS':-0.043,'LEU':-0.631,'MET':-0.626,'ASN':-0.381,'PRO':-0.271,'GLN':-0.368,'ARG':-0.448,'SER':-0.424,'THR':-0.525,'VAL':-0.669,'TRP':-0.727,'TYR':-0.721}
+    # Length of the peptidic chain
+    L = len(res_names)
+    # Get the flex scores
+    flex_scores_peptide = [flex_scores2[res_names[i]] for i in range(L)]
+    s = int((window_size + 1)/2)
+    scale_factor = 1/s*(L-(window_size-1))
+    # Compute the FORMULA
+    all_aa_flex_val = []
+    for j in range(s,L-(s-1)):
+        k = 0
+        for i in range(1,s-1):
+            k = i/s*(flex_scores_peptide[j-1]+flex_scores_peptide[j+1])
+        #Flexibility score F of each aa
+        all_aa_flex_val.append(flex_scores_peptide[j-1] + k)
+
+
+    # Flexibility score F of the whole protein
+    # With scale factor
+    F_val = scale_factor*sum(all_aa_flex_val)
+    # Without scale factor
+    # F_val = sum(all_aa_flex)
+    return F_val, all_aa_flex_val
+
+def scale_function(all_aa_flex):
+    """Obtain the flexibility aminoacids scores in a range of values between 0 and 1,
+    following the formula:
+
+        Fscore = (Fscore-min(Fscore))/(max(Fscore)-min(Fscore))
+
+    Return: list of scaled F scores
+    """
+    all_aa_flex_norm = list(map(lambda i:(i - min(all_aa_flex))/(max(all_aa_flex) - min(all_aa_flex)), all_aa_flex))
+    return all_aa_flex_norm
 
 def get_sstructure(pdb_file, pdb_code, prot_chain):
     """Calculate the secondary structure and accesibility by using DSSP program
