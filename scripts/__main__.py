@@ -46,3 +46,34 @@ for val in list(zip(sstructures, all_sim)):
 
     sim_sstructure = [sstructure[i] for i in similarities]
     all_sim_sstructures.append(sim_sstructure)
+
+# Get thee flex score
+## GEt get_residues
+residues = [get_bfactors2(prot[0], prot[1], prot[2], prot[3], prot[4]) for prot in
+                 list(zip(pdb_outfiles,protein_codes, protein_chains, all_sim, all_aln_res))]
+
+## Compute F score validation
+r0 = []
+for i in residues[0]:
+    r0.append(i.get_resname())
+
+F5_val = flexibility_val(r0, window_size=5)
+F1_cval = flexibility_val(r0, window_size=1)
+
+## Get the b-factor only for regions of similarity
+all_sim_bfactors = list()
+
+for val in list(zip(all_norm_bfactors, all_sim)):
+    norm_bfactors = val[0]
+    similarities  = val[1]
+
+    sim_bfactors = [norm_bfactors[i] for i in similarities]
+    all_sim_bfactors.append(sim_bfactors)
+
+## Compute the F score
+F5,flex_scores = flexibility(all_sim_bfactors, window_size = 5)
+F3 = flexibility(all_sim_bfactors, window_size = 3)
+F1 = flexibility(all_sim_bfactors, window_size = 1)
+
+## F scores normalized
+norm_flex_scores = scale_function(flex_scores)
