@@ -274,9 +274,9 @@ def flexibility(all_sim_bfactors, window_size):
 
     # Flexibility score F of the whole protein
     # With scale factor
-    #F = scale_factor*sum(all_aa_flex)
+    F = scale_factor*sum(all_aa_flex)
     # Without scale factor
-    F = sum(all_aa_flex)
+    # F = sum(all_aa_flex)
     return F, all_aa_flex
 
 ## SECOND APPROACH
@@ -307,7 +307,7 @@ def get_bfactors2(pdb_file, pdb_code, pdb_chain, all_sim, aln_res):
 
     return residues_aln
 
-def flexibility2(res_names, window_size):
+def flexibility_val(res_names, window_size):
     #[?] Decide which flex score from the paper (Table 3 or 4) to use
     """ This function will return a flexibility score for the total protein and a
         list with the flexibility of each aa, taking into account how flexible or
@@ -337,23 +337,32 @@ def flexibility2(res_names, window_size):
     s = int((window_size + 1)/2)
     scale_factor = 1/s*(L-(window_size-1))
     # Compute the FORMULA
-    all_aa_flex = []
+    all_aa_flex_val = []
     for j in range(s,L-(s-1)):
         k = 0
         for i in range(1,s-1):
             k = i/s*(flex_scores_peptide[j-1]+flex_scores_peptide[j+1])
         #Flexibility score F of each aa
-        all_aa_flex.append(flex_scores_peptide[j-1] + k)
+        all_aa_flex_val.append(flex_scores_peptide[j-1] + k)
 
 
     # Flexibility score F of the whole protein
     # With scale factor
-    #F = scale_factor*sum(all_aa_flex)
+    F_val = scale_factor*sum(all_aa_flex_val)
     # Without scale factor
-    F = sum(all_aa_flex)
-    return F, all_aa_flex
+    # F_val = sum(all_aa_flex)
+    return F_val, all_aa_flex_val
 
+def scale_function(all_aa_flex):
+    """Obtain the flexibility aminoacids scores in a range of values between 0 and 1,
+    following the formula:
 
+        Fscore = (Fscore-min(Fscore))/(max(Fscore)-min(Fscore))
+
+    Return: list of scaled F scores
+    """
+    all_aa_flex_norm = list(map(lambda i:(i - min(all_aa_flex))/(max(all_aa_flex) - min(all_aa_flex)), all_aa_flex))
+    return all_aa_flex_norm
 
 
 if __name__ == '__main__':
@@ -379,12 +388,15 @@ if __name__ == '__main__':
     ## GEt get_residues
     residues = [get_bfactors2(prot[0], prot[1], prot[2], prot[3], prot[4]) for prot in
                      list(zip(pdb_outfiles,protein_codes, protein_chains, all_sim, all_aln_res))]
+
+    ## Compute F score validation
     r0 = []
     for i in residues[0]:
         r0.append(i.get_resname())
 
-    F2 = flexibility2(r0, window_size=5)
-    F2_1 = flexibility2(r0, window_size=1)
+    F5_val = flexibility_val(r0, window_size=5)
+    F1_cval = flexibility_val(r0, window_size=1)
+
     ## Get the b-factor only for regions of similarity
     all_sim_bfactors = list()
 
@@ -396,9 +408,9 @@ if __name__ == '__main__':
         all_sim_bfactors.append(sim_bfactors)
 
     ## Compute the F score
-    F5 = flexibility(all_sim_bfactors, window_size = 5)
+    F5,flex_scores = flexibility(all_sim_bfactors, window_size = 5)
     F3 = flexibility(all_sim_bfactors, window_size = 3)
     F1 = flexibility(all_sim_bfactors, window_size = 1)
 
-    ## Compute the mean
-    final_bfactors = [sum(sim_bfactors)/len(all_sim_bfactors) for sim_bfactors in zip(*all_sim_bfactors)]
+    ## F scores normalized
+    norm_flex_scores = scale_function(flex_scores)
