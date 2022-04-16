@@ -100,7 +100,7 @@ def get_pdb_sequences(pdb_codes, chains, pdb_outfiles):
     logging.info("Obtaining PDB files for candidate and target proteins")
 
     ## Get PDBs
-    r = PDBList()  # Object instance
+    r = PDBList(verbose=True)  # Object instance
     r.download_pdb_files(pdb_codes = pdb_codes , file_format = "pdb",
                          pdir = "structures/", overwrite=True)   # creates the directory if do not exists
 
@@ -194,7 +194,7 @@ def get_bfactors(pdb_file, pdb_code, pdb_chain, aln_res):
 
     # Read pdb file
     with open(pdb_file, "r") as fh:
-        parser = PDBParser()
+        parser = PDBParser(QUIET=True)
         structure = parser.get_structure(pdb_code, fh)
 
     resolution = structure.header['resolution']
@@ -223,6 +223,61 @@ def normalize_bfactor(bfactor):
                 (bf-statistics.mean(bfactor))/statistics.stdev(bfactor), bfactor))
     return n_bfactor
 
+def get_sstructure(pdb_file, pdb_code, prot_chain):
+    """Calculate the secondary structure and accesibility by using DSSP program
+        - Needs to have dssp installed (https://github.com/cmbi/dssp)
+            - requirements (sudo apt-get install libboost-all-dev)
+        - Needs pdb extension
+
+
+        The DSSP codes for secondary structure used here are:
+            =====     ====
+            Code      Structure
+            =====     ====
+             H        Alpha helix (4-12)
+             B        Isolated beta-bridge residue
+             E        Strand
+             G        3-10 helix
+             I        Pi helix
+             T        Turn
+             S        Bend
+             \-       None
+            =====     ====
+
+        However, we will convert DSSP's 8-state assignments into 3-state:
+        [C - coil, E - extended (beta-strand), H - helix].
+
+    Return: sequence and sstructure
+    """
+    from Bio.PDB import PDBParser
+    from Bio.PDB.DSSP import DSSP
+
+    # Parse PDB file and execute DSSP
+    with open(pdb_file, "r") as fh:
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure(pdb_code, fh)
+        model = structure[0]
+        dssp = DSSP(model, pdb_file,  dssp='mkdssp')
+
+    # Retrieve the secondary structure from dssp results
+    sstructure = ''
+    for i in range(len(dssp)):
+        a_key = list(dssp.keys())[i]
+
+        if a_key[0] == prot_chain:
+            sstructure += dssp[a_key][2]
+
+    # Convert 8-state to 3-state
+    sstructure = sstructure.replace('-', 'C')
+    sstructure = sstructure.replace('I', 'C')
+    sstructure = sstructure.replace('T', 'C')
+    sstructure = sstructure.replace('S', 'C')
+    sstructure = sstructure.replace('G', 'H')
+    sstructure = sstructure.replace('B', 'E')
+
+    return sstructure
+
+
 if __name__ == '__main__':
     protein_codes = ["1xb7", "2ewp", "3d24"] # PDB codes in lowercasese
     protein_chains = ["A", "E", "A"]
@@ -237,7 +292,7 @@ if __name__ == '__main__':
     all_sim, all_aln_res = clustal_annotations(msa_obj)
 
     # Obtain the mean of normalized b-factors for residues in regions with similarities
-    ## Get the b-factors for all residues and normalize
+    # Get the b-factors for all residues and normalize
 
     all_bfactors = [get_bfactors(prot[0], prot[1], prot[2], prot[3]) for prot in
                      list(zip(pdb_outfiles,protein_codes, protein_chains, all_aln_res))]
@@ -253,5 +308,17 @@ if __name__ == '__main__':
         sim_bfactors = [norm_bfactors[i] for i in similarities]
         all_sim_bfactors.append(sim_bfactors)
 
-    ## Compute the mean
-    final_bfactors = [sum(sim_bfactors)/len(all_sim_bfactors) for sim_bfactors in zip(*all_sim_bfactors)]
+    # Compute the mean
+    final_bfactors = [sum(sim_bfactors) for sim_bfactors in zip(*all_sim_bfactors)]
+
+    # Get Secondary Structure
+    pdb_outfiles = [f"structures/pdb{code}.pdb" for code in protein_codes]
+    sstructures = [get_sstructure(prot[0], prot[1], prot[2]) for prot in list(zip(pdb_outfiles, protein_codes, protein_chains))]
+    # Get Secondary structure of regions of similarity
+    all_sim_sstructures = list()
+    for val in list(zip(sstructures, all_sim)):
+        sstructure = val[0]
+        similarities = val[1]
+
+        sim_sstructure = [sstructure[i] for i in similarities]
+        all_sim_sstructures.append(sim_sstructure)
