@@ -17,6 +17,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
 
     # Python modules
     import os
+    import subprocess
     from Bio import SeqIO
     from Bio.Blast.Applications import NcbiblastpCommandline
     from Bio.Blast import NCBIXML
@@ -24,6 +25,15 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
 
     # Checking if the input is a file or a sequence:
     if os.path.isfile(input_file):
+        # Get BLASTP db
+        subprocess.run(["wget", "https://ftp.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt.gz"], check=True)
+        subprocess.run(["gunzip", "pdb_seqres.txt.gz"], check=True)
+        subprocess.run(["makeblastdb", "-in", "pdb_seqres.txt", "-dbtype", "prot",
+                        "-title", "PDBdb", "-parse_seqids", "-out", "PDBdb"], check=True)
+        os.makedirs("db", exist_ok=True)
+        subprocess.run(["mv", "PDBdb*", "db/"], check=True)
+
+
         # BLASTP
         blastp_cline = NcbiblastpCommandline(query = input_file, db = "db/PDBdb", outfmt = 5, out = "results.xml")
         stdout, stderr = blastp_cline()
@@ -43,6 +53,9 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
 
         if len(hits_dict) < 7: # arbitrary value to ensure we have an enough number of proteins
             print("Less than 7 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
+            # Psiblast db
+            # subprocess.run(["makeblastdb", "-in", "uniprot_sprot.fasta", "-dbtype", "prot",
+            #                 "-title", "UNIPROTdb", "-parse_seqids", "-out", "UNIPROTdb"], check=True)
             # PSIBLAST
             psiblast_uniprot_cline = NcbipsiblastCommandline(
                 db = 'db/UNIPROTdb', query = input_file, evalue =  1 ,
@@ -205,8 +218,6 @@ def msa(pdb_seqs_filename):
 
     Return: multiple Aligment object
     """
-
-    # install t-coffe: https://www.tcoffee.org/Projects/tcoffee/documentation/index.html#document-tcoffee_installation
 
     from Bio.Align.Applications import TCoffeeCommandline
     from Bio import AlignIO
@@ -436,8 +447,6 @@ def scale_function(all_aa_flex):
 
 def get_sstructure(pdb_file, pdb_code, prot_chain):
     """Calculate the secondary structure and accesibility by using DSSP program
-        - Needs to have dssp installed (https://github.com/cmbi/dssp)
-            - requirements (sudo apt-get install libboost-all-dev)
         - Needs pdb extension
 
 

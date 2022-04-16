@@ -7,7 +7,7 @@ import argparse
 ## Command line arguments
 ################################################################################
 def is_file(string):
-    """Check if the input provided is a file
+    """Check if the input file provided is a file
     """
     import os
 
@@ -135,5 +135,4 @@ F1 = flexibility(all_sim_bfactors, window_size = 1)
 norm_flex_scores = scale_function(flex_scores)
 
 # Get Hidrobicity
-
 hydroph_scores_aa, gravy = get_hydrophobicity(input_file)
