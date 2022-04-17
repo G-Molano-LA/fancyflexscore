@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 # Blastp and psiblast: https://www.ncbi.nlm.nih.gov/books/NBK569861/
 subprocess.run(["wget", "https://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/ncbi-blast-2.13.0+-x64-linux.tar.gz"], check=True)
@@ -12,7 +13,7 @@ subprocess.run(["sudo", "apt-get", "install", "t-coffee"], check=True) # sudo ap
 subprocess.run(["sudo", "apt-get", "install", "libboost-all-dev"], check=True)
 subprocess.run(["wget", "https://github.com/cmbi/dssp/archive/refs/tags/2.3.0.tar.gz"], check=True)
 subprocess.run(["tar", "-zxvf", "2.3.0.tar.gz"], check=True)
-subprocess.run(["cd", "dssp-2.3.0/"], check=True)
+os.chdir("dssp-2.3.0/")
 
 subprocess.run(["./autogen.sh"], check=True)
 subprocess.run(["./configure"], check=True)
