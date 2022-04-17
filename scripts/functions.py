@@ -26,16 +26,22 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
     # Checking if the input is a file or a sequence:
     if os.path.isfile(input_file):
         # Get BLASTP db
-        subprocess.run(["wget", "https://ftp.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt.gz"], check=True)
-        subprocess.run(["gunzip", "pdb_seqres.txt.gz"], check=True)
-        subprocess.run(["makeblastdb", "-in", "pdb_seqres.txt", "-dbtype", "prot",
-                        "-title", "PDBdb", "-parse_seqids", "-out", "PDBdb"], check=True)
-        os.makedirs("db", exist_ok=True)
-        subprocess.run(["mv", "PDBdb*", "db/"], check=True)
+        if os.path.isdir('./db/blastp'):
+            if os.listdir("./db/blastp"):
+                print("Using the existing blastp database located at './db/blastp'")
+            else:
+                raise OSError("Not database found! Please delete the ./db/blastp folder to allow the creation of a new one")
+        else:
+            subprocess.run(["wget", "https://ftp.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt.gz"], check=True)
+            subprocess.run(["gunzip", "pdb_seqres.txt.gz"], check=True)
+            subprocess.run(["makeblastdb", "-in", "pdb_seqres.txt", "-dbtype", "prot",
+                            "-title", "PDBdb", "-parse_seqids", "-out", "PDBdb"], check=True)
+            os.makedirs("db/blastp", exist_ok=True)
+            subprocess.run(["mv", "PDBdb*", "db/blastp/"], check=True)
 
 
         # BLASTP
-        blastp_cline = NcbiblastpCommandline(query = input_file, db = "db/PDBdb", outfmt = 5, out = "results.xml")
+        blastp_cline = NcbiblastpCommandline(query = input_file, db = "db/blastp/PDBdb", outfmt = 5, out = "results.xml")
         stdout, stderr = blastp_cline()
 
         # Parse the results file
@@ -54,17 +60,28 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
         if len(hits_dict) < 7: # arbitrary value to ensure we have an enough number of proteins
             print("Less than 7 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
             # Psiblast db
-            # subprocess.run(["makeblastdb", "-in", "uniprot_sprot.fasta", "-dbtype", "prot",
-            #                 "-title", "UNIPROTdb", "-parse_seqids", "-out", "UNIPROTdb"], check=True)
+            if os.path.isdir('./db/psiblast') and os.path.isdir('./db/blastp'):
+                if os.listdir("./db/psiblast") and os.listdir("./db/blastp"):
+                    print("Using the existing PDB and psiblast databases located at './db/blastp' and './db/psiblast'")
+                else:
+                    raise OSError("Not database found! Please delete the ./db/blastp folder to allow the creation of a new one")
+            else:
+                print("Creating a Uniprot database to perform the psiblast")
+                subprocess.run(["wget", "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz"], check=True)
+                subprocess.run(["gunzip", "uniprot_sprot.fasta.gz"], check=True)
+                subprocess.run(["makeblastdb", "-in", "uniprot_sprot.fasta", "-dbtype", "prot",
+                                "-title", "UNIPROTdb", "-parse_seqids", "-out", "UNIPROTdb"], check=True)
+                os.makedirs("db/psiblast", exist_ok=True)
+                subprocess.run(["mv", "UNIPROTdb*", "db/psiblast/"], check=True)
             # PSIBLAST
             psiblast_uniprot_cline = NcbipsiblastCommandline(
-                db = 'db/UNIPROTdb', query = input_file, evalue =  1 ,
+                db = 'db/psiblast/UNIPROTdb', query = input_file, evalue =  1 ,
                 out = "psiblast_uniprot_results.xml", outfmt = 5,
                 out_pssm = "psiblast_uniprot3.pssm", num_iterations = 3
                 )
             stdout_psi_uni, stderr_psi_uni = psiblast_uniprot_cline()
             psiblast_pdb_cline = NcbipsiblastCommandline(
-                db = 'db/PDBdb', out = "psiblast_pdb_results.xml", outfmt = 5,
+                db = 'db/blastp/PDBdb', out = "psiblast_pdb_results.xml", outfmt = 5,
                 in_pssm = "psiblast_uniprot3.pssm"
                 )
             stdout_psi_pdb, stderr_psi_pdb = psiblast_pdb_cline()
