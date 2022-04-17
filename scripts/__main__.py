@@ -13,7 +13,7 @@ def is_file(string):
 
     # Check the extension of the file
     if string.endswith("fa") or string.endswith("fasta"):
-        pass
+        return string
     else:
         msg = f"{string} is has not a valid input_file format (.fa/.fasta)"
         raise arg.parse.ArgumentTypeError(msg)

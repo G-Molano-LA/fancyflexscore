@@ -17,6 +17,8 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
 
     # Python modules
     import os
+    import glob # for matching wildcards
+    import shutil
     import subprocess
     from Bio import SeqIO
     from Bio.Blast.Applications import NcbiblastpCommandline
@@ -37,8 +39,11 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
             subprocess.run(["makeblastdb", "-in", "pdb_seqres.txt", "-dbtype", "prot",
                             "-title", "PDBdb", "-parse_seqids", "-out", "PDBdb"], check=True)
             os.makedirs("db/blastp", exist_ok=True)
-            subprocess.run(["mv", "PDBdb*", "db/blastp/"], check=True)
 
+            files = glob.glob("PDBdb*")
+            for filename in files:
+                file_name = os.path.basename(filename)
+                s = shutil.move(filename, f"db/blastp/{file_name}")
 
         # BLASTP
         blastp_cline = NcbiblastpCommandline(query = input_file, db = "db/blastp/PDBdb", outfmt = 5, out = "results.xml")
@@ -72,7 +77,12 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
                 subprocess.run(["makeblastdb", "-in", "uniprot_sprot.fasta", "-dbtype", "prot",
                                 "-title", "UNIPROTdb", "-parse_seqids", "-out", "UNIPROTdb"], check=True)
                 os.makedirs("db/psiblast", exist_ok=True)
-                subprocess.run(["mv", "UNIPROTdb*", "db/psiblast/"], check=True)
+
+                files = glob.glob("UNIPROTdb*")
+                for filename in files:
+                    file_name = os.path.basename(filename)
+                    s = shutil.move(filename, f"db/psiblast/{file_name}")
+
             # PSIBLAST
             psiblast_uniprot_cline = NcbipsiblastCommandline(
                 db = 'db/psiblast/UNIPROTdb', query = input_file, evalue =  1 ,
