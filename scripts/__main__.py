@@ -66,9 +66,9 @@ pdb_outfiles = download_pdb_files(protein_codes)
 # Apply resolution quality filter
 final_protein_codes, final_chains = pdb_quality_filter(pdb_outfiles, protein_codes, hits_dict)
 # Download filtered homologs
-pdb_outfiles = download_pdb_files(final_protein_codes)
+pdb_outfiles = [f"structures/pdb{code}.ent" for code in final_protein_codes]
 # Get fasta sequences for multiple sesquence alignment
-pdb_seqs_filename = get_pdb_sequences(protein_codes, protein_chains)
+pdb_seqs_filename = get_pdb_sequences(final_protein_codes, final_chains)
 # Perfom Multiple Sequence Aligment
 msa_obj= msa(pdb_seqs_filename)
 # Obtain position of identifical residues & the length of the pdb residues
@@ -78,7 +78,7 @@ all_sim, all_con, all_rest, all_len_pdb, all_seqs = clustal_annotations(msa_obj)
 # Get the b-factors for all residues and normalize
 
 all_bfactors = [get_bfactors(prot[0], prot[1], prot[2], prot[3]) for prot in
-                 list(zip(pdb_outfiles,protein_codes, protein_chains, all_len_pdb))]
+                 list(zip(pdb_outfiles,final_protein_codes, final_chains, all_len_pdb))]
 all_norm_bfactors = [normalize_bfactor(bfactors) for bfactors in all_bfactors]
 
 ## Get the b-factor only for regions of similarity
@@ -89,7 +89,7 @@ final_bfactors = get_modified_bfactors(all_norm_bfactors, all_sim, all_con, all_
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## GEt get_residues
 residues = [get_bfactors2(prot[0], prot[1], prot[2], prot[3], prot[4]) for prot in
-                 list(zip(pdb_outfiles,protein_codes, protein_chains, all_sim, all_len_pdb))]
+                 list(zip(pdb_outfiles,final_protein_codes, final_chains, all_sim, all_len_pdb))]
 
 ## Compute F score validation
 r0 = []
@@ -110,8 +110,18 @@ norm_flex_scores = scale_function(flex_scores)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Get Secondary Structure
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pdb_outfiles = [f"structures/pdb{code}.pdb" for code in protein_codes]
-sstructures = [get_sstructure(prot[0], prot[1], prot[2]) for prot in list(zip(pdb_outfiles, protein_codes, protein_chains))]
+from pathlib import Path
+from glob import glob
+# Change the extension of pdb '.ent' to '.pdb'
+files = glob("structures/*.ent")
+for name in files:
+    p = Path(name)
+    s = p.rename(p.with_suffix('.pdb'))
+
+pdb_outfiles = [f"structures/pdb{code}.pdb" for code in final_protein_codes]
+
+
+sstructures = [get_sstructure(prot[0], prot[1], prot[2]) for prot in list(zip(pdb_outfiles, final_protein_codes, final_chains))]
 # Get Secondary structure of regions of similarity
 all_sim_sstructures = list()
 for val in list(zip(sstructures, all_sim)):
