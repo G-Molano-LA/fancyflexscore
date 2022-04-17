@@ -62,7 +62,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
         protein_codes = [x.lower() for x in protein_codes]
         protein_chains = list(hits_dict.values())
 
-        if len(hits_dict) < 7: # arbitrary value to ensure we have an enough number of proteins
+        if len(hits_dict) < 12: # arbitrary value to ensure we have an enough number of proteins
             print("Less than 7 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
             # Psiblast db
             if os.path.isdir('./db/psiblast') and os.path.isdir('./db/blastp'):
@@ -102,7 +102,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
                         for hsp in psialign.hsps:
                             if hsp.expect < PSI_E_VALUE_THRESH:
                                 hits_dict.setdefault(psialign.title[4:8], psialign.title[9])
-                if len(hits_dict) == 7:
+                if len(hits_dict) == 12:
                     break
             protein_codes = list(hits_dict.keys())
             protein_codes = [x.lower() for x in protein_codes]
@@ -164,41 +164,42 @@ def extract_fasta_sequence(fasta_file):
 
     return prot_id, prot_seq
 
-def pdb_quality_filter(pdb_files, protein_codes, hits_dict, resolution = 2):
+def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
     # Needs the protein_codes and hits_dict from the get_pdb_homologs function
     """
-    Takes the files from the "structures/" directory, parses them to obtain the resolution and returns the three
-    hits with the highest e-value and a resolution higher than 2 Angstroms.
+    Downloads a list of PDB files and stores them in the structures directory. Then, takes the files 
+    from the "structures/" directory, parses them to obtain the resolution and returns the three
+    hits with the highest e-value and a resolution higher than 2 Angstroms, by default.
 
     Input: List of protein codes from the BLAST and dictionary of the chains for each hit. Optional: Resolution
 
-    Return: List of three protein PDB codes and their respective chains
+    Return: List of three protein PDB codes and their respective chains. Directory called "structures" with 
+    the PDB files in it in the format: "structures/pdb{code}.ent"
     """
-    res_dict = {}
-    for val in list(zip(pdb_files, protein_codes)):
-        pdb_file = val[0]
-        prot_code = val[1]
+    # SHOULD RETURN THE OUTPUT FILES?
 
-        # Read pdb file
-        structure = get_pdb_structure(pdb_file, prot_code)
-        res_dict[prot_code] = structure.header['resolution']
+    from Bio.PDB.PDBList import PDBList
+    import os
 
-    # Order the dictionary according to the highest e-value order
-    ordered_res_dict = {k: res_dict[k] for k in protein_codes}
-
-    # Now, we will keep just the three hits with the highest e-value and a resolution lower than 2
     final_protein_codes = []
     final_chains = []
-
-    for key in ordered_res_dict:
+    #pdb_outfiles = []
+    for code in protein_codes:
+        ## Get PDB files
+        r = PDBList()  # Object instance
+        r.retrieve_pdb_file(pdb_code = code, file_format = "pdb", pdir = "structures/", overwrite=True) # creates the directory if do not exists
+        # Read pdb file
+        structure = get_pdb_structure(f"structures/pdb{code}.pdb", code)
+        # Evaluate resolution
+        if structure.header['resolution'] <= 2:
+            final_protein_codes.append(code)
+            final_chains.append(hits_dict[code])
+            #pdb_outfiles.append(f"structures/pdb{code}.pdb") and include variable in return
+        else:
+            os.remove(f"structures/pdb{code}.pdb")
+        
         if len(final_protein_codes) == 3:
             break
-        elif ordered_res_dict[key] <= resolution:
-            final_protein_codes.append(key)
-
-    for code in final_protein_codes:
-        final_chains.append(hits_dict[code])
-
     return final_protein_codes, final_chains
 
 def get_aln_sequences(input_file, pdb_outfiles, pdb_codes, chains):
