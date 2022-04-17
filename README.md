@@ -32,44 +32,6 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
   - Score associated to each aminoacid
 
 # TO DO LIST
-
-1. Search candidates that has similar structure with our target protein: GERARD
-  - INPUT: Fasta Sequence of the target protein
-  - OUTPUT: PDB codes (list) and chains of the pdbs (list)
-  - [X] Decide which workflow is better to follow to perform a pairwise aln (blast, psiblast, jackhammer...)
-  - [X] Implement the pairwise aln in python
-  - [ ] implement the downloading of the databases to perform the searches
-  - [ ] Mirar comentarios en la función `get_pbd_homologs`.
-2. Obtain the PDB model of the target protein: ALE
-  - INPUT: PDB codes
-  - OUTPUT: PDB fasta sequences
-  - [X] Download pdb files
-  - [X] Obtain fasta sequences
-  - [X] Format of fasta sequences
-3. With these candidates, obtain regions of similarity: IRIA
-  - [X] Decide which multiple aln (MSA) approach to use --> SEQUENCE aln with T-coffee
-  - [X] Implement the MSA in python
-4. Obtain b-factors of regions of similarity (implement in python): ALE
-  - [X] Identify regions of similarity in the MSA
-  - [ ] Take the b-factor of this regions of similarity:
-    - REVISAR. If there there is only one candidate sharing this region: take the alfa-carbon b-factor of the aminoacids
-    - OK. If there is more than one candidate sharing this region: take the mean of the alfa-carbon b-factor of the aminoacid
-  - [X] Standaritze values
-  - Weight the b-factor values based on the surrounding b-factor values.
-5. Compute values based on:
-  - [ ] Structural restraints.
-  - [ ] Hidrofobicity.
-6. Give weights to the different parameters:
-    - [ ] B-factors ex. 0.33
-    - [ ] Secondary structure restraints ex. 0.33
-    - [ ] Hidrofobicity ex. 0.33  
-7. Obtain a final flexibility score:
-  - [ ] Weighted score for each aminoacid
-  - [ ] Define a threshold to decide if the weighted score is flexible or not = obtain 0 and 1s.
-  - [ ] Obtain the final score for each aminoacid by applying the threshold. (airi formula)
-    $$ f(x) = $$
-  - [ ] Sum all 0,1s and normalize by the number of aminoacids (average). (airi formula)
-    $$ \sigma = $$
 8. Do documentation:
   -  [ ] Configure logging for all the modules
   -  [ ] Tutorial with examples on how to use the program
@@ -88,11 +50,8 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 - Gery said: b-factor del alpha fold = bad predictions (all have high values)  
 
 
-
 # Project Objective
-
 Programming a standalone program for solving a specific problems.
-
 
  **Objective**: To develop a flexibility score for proteins  
  **Input**: protein sequence or protein family. The input should be a sequence in FASTA format, not a uniprot code.
