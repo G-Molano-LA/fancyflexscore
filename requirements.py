@@ -11,8 +11,8 @@ subprocess.run(["sudo", "apt-get", "install", "t-coffee"], check=True) # sudo ap
 # Dssp: https://github.com/cmbi/dssp
 subprocess.run(["sudo", "apt-get", "install", "libboost-all-dev"], check=True)
 subprocess.run(["wget", "https://github.com/cmbi/dssp/archive/refs/tags/2.3.0.tar.gz"], check=True)
-subprocess.run(["tar", "-zxvf", "dssp-2.3.0.tar.gz"], check=True)
-subprocess.run(["cd", "dssp-2.3.0.tar.gz"], check=True)
+subprocess.run(["tar", "-zxvf", "2.3.0.tar.gz"], check=True)
+subprocess.run(["cd", "dssp-2.3.0/"], check=True)
 
 subprocess.run(["./autogen.sh"], check=True)
 subprocess.run(["./configure"], check=True)
