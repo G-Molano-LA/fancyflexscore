@@ -481,9 +481,9 @@ def flexibility(final_bfactors, window_size):
     scale_factor = 1/s*(L-(window_size-1))
     # Compute the FORMULA
     all_aa_flex = []
-    for j in range(s,L-(s-1)):
+    for j in range(s-1,L-(s-1)):
         k = 0
-        for i in range(0,s-1):
+        for i in range(1,s-1):
             k = i/s*(final_bfactors[j-1]+final_bfactors[j+1])
         #Flexibility score F of each aa
         all_aa_flex.append(final_bfactors[j] + k)
