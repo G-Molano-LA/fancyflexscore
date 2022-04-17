@@ -116,23 +116,23 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
     else:
         print("Sorry, introduce a valid input")
 
-def download_pdb_files(pdb_codes_list):
-    """Downloads a list of PDB files and stores them in the structures directory
 
-    Input: List of PDB codes of the proteins
-
-    Return: Directory called "structures" with the PDB files in it in the format: "structures/pdb{code}.ent"
+def get_pdb_from_alphafold(target_id):
+    """Retrieve structure from alphafold server
+    Return filename
     """
-    from Bio.PDB.PDBList import PDBList
-    ## Output files
-    pdb_outfiles = [f"structures/pdb{code}.pdb" for code in pdb_codes_list]
+    import requests
 
-    ## Get PDB files
-    r = PDBList()  # Object instance
-    r.download_pdb_files(pdb_codes = pdb_codes_list , file_format = "pdb",
-                        pdir = "structures/", overwrite=True)   # creates the directory if do not exists
+    url = f"https://alphafold.ebi.ac.uk/files/AF-{target_id}-F1-model_v2.pdb"
+    # Define the local filename to save data
+    local_file = f'structures/{target_id}.pdb'
+    # Make http request for remote file data
+    target_data = requests.get(url)
+    # Save file data to local copy
+    with open(local_file, 'wb')as file:
+        file.write(target_data.content)
 
-    return pdb_outfiles
+    return local_file
 
 def get_pdb_structure(pdb_file, pdb_code):
     """ Parse pdb structure
@@ -155,7 +155,7 @@ def extract_fasta_sequence(fasta_file):
     from Bio import SeqIO
 
     with open(fasta_file, 'r') as fasta:
-        for i, record in enumerate(SeqIO.parse(fasta, 'pdb-atom')):
+        for i, record in enumerate(SeqIO.parse(fasta, 'fasta')):
             if i == 1:
                 raise OSError("The FASTA input file must contain one unique record")
 
@@ -167,13 +167,13 @@ def extract_fasta_sequence(fasta_file):
 def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
     # Needs the protein_codes and hits_dict from the get_pdb_homologs function
     """
-    Downloads a list of PDB files and stores them in the structures directory. Then, takes the files 
+    Downloads a list of PDB files and stores them in the structures directory. Then, takes the files
     from the "structures/" directory, parses them to obtain the resolution and returns the three
     hits with the highest e-value and a resolution higher than 2 Angstroms, by default.
 
     Input: List of protein codes from the BLAST and dictionary of the chains for each hit. Optional: Resolution
 
-    Return: List of three protein PDB codes and their respective chains. Directory called "structures" with 
+    Return: List of three protein PDB codes and their respective chains. Directory called "structures" with
     the PDB files in it in the format: "structures/pdb{code}.ent"
     """
     # SHOULD RETURN THE OUTPUT FILES?
@@ -189,15 +189,15 @@ def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
         r = PDBList()  # Object instance
         r.retrieve_pdb_file(pdb_code = code, file_format = "pdb", pdir = "structures/", overwrite=True) # creates the directory if do not exists
         # Read pdb file
-        structure = get_pdb_structure(f"structures/pdb{code}.pdb", code)
+        structure = get_pdb_structure(f"structures/pdb{code}.ent", code)
         # Evaluate resolution
-        if structure.header['resolution'] <= 2:
+        if structure.header['resolution'] <= resolution:
             final_protein_codes.append(code)
             final_chains.append(hits_dict[code])
             #pdb_outfiles.append(f"structures/pdb{code}.pdb") and include variable in return
         else:
-            os.remove(f"structures/pdb{code}.pdb")
-        
+            os.remove(f"structures/pdb{code}.ent")
+
         if len(final_protein_codes) == 3:
             break
     return final_protein_codes, final_chains
@@ -225,7 +225,7 @@ def get_aln_sequences(input_file, pdb_outfiles, pdb_codes, chains):
         with open(fasta_outfile, "w") as out:
             # attach target sequence
             prot_id, prot_seq = extract_fasta_sequence(input_file)
-            print(prot_id, file = out)
+            print(">"+prot_id, file = out)
             print(prot_seq, file = out)
 
             # attach sequence from pdb homologs
@@ -262,43 +262,118 @@ def msa(pdb_seqs_filename):
 
     return msa_obj
 
-def clustal_annotations(msa_obj):
-    """Obtain all the residue positions that are identifical in the alignment.
-     Clustalw alignment annotations:
-        '*'  -- all residues or nucleotides in that column are identical
-        ':'  -- conserved substitutions have been observed
-        '.'  -- semi-conserved substitutions have been observed
-        ' '  -- no match.
+def get_modified_bfactors(msa_seqs, all_norm_bfactors, target_norm_bfactors, all_matrices):
+    from statistics import mean
 
-    Return:
-        - List of list, containing the positions of similarity for each structure
-        - List containing the residue length (position?) associated to the pbd sequence used in the alignment
-    """
-    # Get annotations of clustalw aln
-    annot = msa_obj.column_annotations['clustal_consensus']
+    flex_scores = {
+        'A': 0.717,'C': 0.668,'D': 0.921,'E': 0.963,'F': 0.599, 'G': 0.843,
+        'H': 0.754,'I': 0.632,'K': 0.912,'L': 0.681,'M': 0.685,'N': 0.851,
+        'P': 0.850,'Q': 0.849,'R': 0.814,'S': 0.840,'T': 0.758,'V': 0.619,
+        'W': 0.626,'Y': 0.615
+        }
+
+    # Target msa
+    msa_seq_target = msa_seqs.pop(0)
+    matrix_target = all_matrices.pop(0)
 
     # Obtain length of aln
+    msa_len = len(msa_seq_target)
+
+    # Number of homologues
+    n_homologs = len(msa_seqs)
+
+    # PDB residue index
+    len_pdb = -1
+    # PDB sequence
+    seq = ""
+
+    for i in range(msa_len):
+        target_aa = msa_seq_target[i]
+        # Missing residues (X) or gaps (-) are ignored
+        if target_aa != "X" and target_aa != "-":
+            len_pdb += 1
+            # Check the same position in the homolog sequence
+            h_aa =[homolog_seq[i] for homolog_seq in msa_seqs]
+
+            if target_aa in h_aa:
+                # If there are coincidences between target and homologues
+                identities = h_aa.count(target_aa)
+
+                if identities == 1:
+                    # Find in which homologue the coincidence is found
+                    homolog_index = h_aa.index(target_aa)
+
+                    # Get position of this coincident aa in the homologue sequence and obtain the bfactor
+                    residue_index = all_matrices[homolog_index][i]
+                    bfactor = all_norm_bfactors[homolog_index][residue_index]
+                else:
+                    # If there are more than one coincidence
+                    # Find in which homologue the coincidences are found
+                    homolog_indexes = [i for i in range(len(h_aa)) if h_aa[i] == target_aa]
+
+                    # For each homologue, find the position where the coincident is located in each homologue
+                    residues_indexes = [all_matrices[homolog_index][i] for homolog_index in homolog_indexes]
+
+                    # Get the bfactors for each coincidence
+                    bfactors = [all_norm_bfactors[val[0]][val[1]] for val in list(zip(homolog_indexes, residues_indexes))]
+
+                    #Compute the mean of b_factors
+                    bfactor =  mean(bfactors)
+
+            elif len(set(h_aa)) > 1 :
+                h_aa_set = set(h_aa)
+
+                # Remove possible X
+                if 'X' in h_aa_set:
+                    h_aa_set.remove('X')
+
+                # If there there is some aa aligned with target
+                no_aln_set = set('-')
+
+                # Find the different residue
+                diff_set = set(h_aa).difference(no_aln_set)
+
+                if len(diff_set) == 1:
+                    # Find in which homologue the residue is found
+                    res = diff_set.pop()
+                    homolog_index = h_aa.index(res)
+
+                    # Get position of this coincident aa in the homologue sequence and obtain the bfactor
+                    residue_index = all_matrices[homolog_index][i]
+                    bfactor = all_norm_bfactors[homolog_index][residue_index]
+                else:
+                    # There are more than one different residue aligned with our target aa
+                    # Use predefined bfactor values
+                    bfactor = flex_scores[target_aa]
+
+            else:
+                # There is no homolog aa aligned with our target aa
+                # Use predefined bfactor values
+                bfactor = flex_scores[target_aa]
+
+            target_norm_bfactors[len_pdb] = bfactor
+
+    return target_norm_bfactors
+
+def get_pdb_seq(msa_obj):
+    """
+    Return: pdb sequence len and pdb sequence
+    """
+    # Obtain length of aln
     msa_len = msa_obj.get_alignment_length()
-    # Obtain sequence
-    all_seqs = list()
-    # all then position of similarities for each protein
-    all_sim = list()
-    all_con = list()
-    all_rest = lit()
+
+    # Outputs
+    all_seqs    = list()
     all_len_pdb = list()
+    all_matrices = list()
 
-    for i in len(range(msa_obj)):
-
+    for obj in msa_obj:
         # Obtain  sequence
-        msa_seq = msa_obj[i].seq
+        msa_seq = obj.seq
         # PDB residue index
         len_pdb = -1
-        # PDB sequence
-        seq = ""
-        # similarities for the sequence
-        sim = list() # identities (*)
-        con = list() # conserved (:)
-        rest = list() # rest(., ' ')
+        seq = ''
+        matrix = list()
 
         for i in range(msa_len):
             # Missing residues (X) or gaps (-) are ignored
@@ -306,20 +381,15 @@ def clustal_annotations(msa_obj):
                 seq += msa_seq[i]
                 len_pdb += 1
 
-                if annot[i] == "*":
-                    sim.append(len_pdb)
-                elif annot[i] == ":":
-                    con.append(len_pdb)
-                else:
-                    rest.append(len_pdb)
+                matrix.append(len_pdb)
+            else:
+                matrix.append(None)
 
-        all_sim.append(sim)
-        all_con.append(con)
-        all_rest.append(rest)
-        all_len_pdb.append(len_pdb)
         all_seqs.append(seq)
+        all_len_pdb.append(len_pdb)
+        all_matrices.append(matrix)
 
-    return all_sim, all_con, all_rest, all_len_pdb, all_seqs
+    return all_seqs, all_len_pdb, all_matrices
 
 
 def get_bfactors(pdb_file, pdb_code, pdb_chain, len_pdb):
@@ -337,10 +407,24 @@ def get_bfactors(pdb_file, pdb_code, pdb_chain, len_pdb):
     # Get the residues involved in the alignment
     residues = [res for res in chain_struct.get_residues()]
 
-    # Get the bfactors of the pdb residues involved in the alignment
-    bfactors = [residues[i].child_dict['CA'].get_bfactor() for i in range(len(residues))
-                if i <= len_pdb]
+    bfactors = list()
+    hetatoms = 0
+    for i in range(len(residues)):
+        if i <= len_pdb:
+            try:
+                bfactors.append(residues[i].child_dict['CA'].get_bfactor())
+            except KeyError:
+                print(f"residue({i}) {residues[i]} has not CA. Probably an heteroatom found. Skipping..")
+                hetatoms += 1
+                continue
+    if hetatoms:
+        for i in range(len_pdb-1,len_pdb-1+hetatoms):
+            bfactors.append(residues[i].child_dict['CA'].get_bfactor())
+
     return bfactors
+
+
+
 
 def normalize_bfactor(bfactor):
     """Obtain the normalized b-factors of c-alpha atoms using the formula:
@@ -353,71 +437,6 @@ def normalize_bfactor(bfactor):
                 (bf-statistics.mean(bfactor))/statistics.stdev(bfactor), bfactor))
     return n_bfactor
 
-def get_modified_bfactors(all_norm_bfactors, all_sim, all_con, all_rest, all_seqs):
-    """ Get the b-factors modified depending if they have identify, conserved regions or something else
-    in the aln.
-        - Identity : compute the mean of b-factors
-        - Conserved: obtain the b-factor of coincident residue
-        - Rest: put iria's bvalues
-
-    """
-    from statistics import mean
-
-    # 1. Get the values for the target seq
-    target_norm_bfactors = all_norm_bfactors.pop(0)
-    target_seq       = all_seqs.pop(0)
-    target_sim       = all_sim.pop(0)
-    target_con       = all_con.pop(0)
-    target_rest      = all_rest.pop(0)
-
-
-    # 2. Get the b-factor only for regions of similarity
-    all_sim_bfactors = list()
-
-    ## Obtain the b-values of regions of similarity for each homologue
-    for val in list(zip(all_norm_bfactors, all_sim)):
-        norm_bfactors = val[0]
-        similarities  = val[1]
-
-        sim_bfactors = [norm_bfactors[i] for i in similarities]
-        all_sim_bfactors.append(sim_bfactors)
-
-    ## Compute the mean of b_values
-    mean_sim_bvalues = [mean(i) for i in list(zip(*all_sim_bfactors))]
-
-    ## Assign the newbvalues to the target
-    for val in list(zip(target_sim, mean_sim_bvalues)):
-        i       = val[0]
-        bfactor = val[1]
-
-        target_norm_bfactors[i] = bfactor
-
-    # 3. Get the bfactor of coincident residue for conserved regions
-    for val in list(zip(all_norm_bfactors, all_con, all_seqs)):
-        homolog_norm_bfactors  = val[0]
-        homolog_conserved      = val[1]
-        homolog_seq            = val[2]
-
-        for i in range(len(target_con)):
-            t = target_con[i]
-            h = homolog_conserved[i]
-
-            if target_seq[t] == homolog_seq[h]:
-                target_norm_bfactors[t] = homolog_norm_bfactors[h]
-
-    # 4. Get the bfactors of rest residues for non-conserved regions
-    flex_scores = {
-        'A': 0.717,'C': 0.668,'D': 0.921,'E': 0.963,'F': 0.599, 'G': 0.843,
-        'H': 0.754,'I': 0.632,'K': 0.912,'L': 0.681,'M': 0.685,'N': 0.851,
-        'P': 0.850,'Q': 0.849,'R': 0.814,'S': 0.840,'T': 0.758,'V': 0.619,
-        'W': 0.626,'Y': 0.615
-        }
-
-    for i in target_con:
-        aa = target_seq[i]
-        target_norm_bfactors[i] = flex_scores[aa]
-
-    return target_norm_bfactors
 
 ## Flexibility
     # [?] Si tenemos b-values de nuestra proteina problema, yo aplicaría la fórmula
@@ -467,7 +486,7 @@ def flexibility(final_bfactors, window_size):
         for i in range(1,s-1):
             k = i/s*(final_bfactors[j-1]+final_bfactors[j+1])
         #Flexibility score F of each aa
-        all_aa_flex.append(final_bfactors[j-1] + k)
+        all_aa_flex.append(final_bfactors[j] + k)
 
 
     # Flexibility score F of the whole protein
@@ -476,74 +495,6 @@ def flexibility(final_bfactors, window_size):
     # Without scale factor
     # F = sum(all_aa_flex)
     return F, all_aa_flex
-
-## SECOND APPROACH
-
-def get_bfactors2(pdb_file, pdb_code, pdb_chain, all_sim, len_pdb):
-    """Obtain the b-factors of c-alpha atoms for all the residues involved in the alignment
-
-    Return: list of b-factors
-    """
-    # Read pdb file
-    structure = get_pdb_structure(pdb_file, pdb_code)
-
-    for chain in structure.get_chains():
-        if chain.id == pdb_chain:
-            chain_struct = chain
-    # Get the residues involved in the alignment
-    residues = [res for res in chain_struct.get_residues()]
-
-    # Get the residues of the pdb residues involved in the alignment
-    residues_aln = [residues[i] for i in all_sim
-                if i <= len_pdb]
-
-    return residues_aln
-
-def flexibility_val(res_names, window_size):
-    #[?] Decide which flex score from the paper (Table 3 or 4) to use
-    """ This function will return a flexibility score for the total protein and a
-        list with the flexibility of each aa, taking into account how flexible or
-        rigid are the neighbourhoods of each amino acid.
-        We will define the flexibility index as a weighted average of amino acid
-        flexibility over wole residue chain of the protein. The neighbourhoods effect
-        is considered using a sliding hat-shaped window. The following formula is
-        implemented:
-         F_ws = scale_factor * sum(j=s,j=(L-(s-1))){lambda_j+sum(i=1,i=s-1){i/(s)*(lambda_{j-1}+lambda_{j+1})}}
-        where:
-        \lambda_j: flexibility scores obtained by David K. Smith,Predrag Radivojac,Zoran Obradovic,A. Keith Dunker,Guang Zhu
-        s = (ws+1)/2 ("start index")
-        L = length of the peptide (in this case aa of similarity regions)
-        ws = window_size
-        scale_factor = 1/(s(L-(ws-1)))
-
-        OUTPUT: protein flexibility score, list with the flexibility score of each aa
-    """
-
-    # FLEXIBILITY scores
-    flex_scores = {'ALA': 0.717,'CYS': 0.668,'ASP': 0.921,'GLU': 0.963,'PHE': 0.599,'GLY': 0.843,'HIS': 0.754,'ILE': 0.632,'LYS': 0.912,'LEU': 0.681,'MET': 0.685,'ASN': 0.851,'PRO': 0.850,'GLN': 0.849,'ARG': 0.814,'SER': 0.840,'THR': 0.758,'VAL': 0.619,'TRP': 0.626,'TYR': 0.615}
-    flex_scores2 = {'ALA':-0.605,'CYS':-0.692,'ASP':-0.279,'GLU':-0.160,'PHE':-0.719,'GLY':-0.537,'HIS':-0.662,'ILE':-0.682,'LYS':-0.043,'LEU':-0.631,'MET':-0.626,'ASN':-0.381,'PRO':-0.271,'GLN':-0.368,'ARG':-0.448,'SER':-0.424,'THR':-0.525,'VAL':-0.669,'TRP':-0.727,'TYR':-0.721}
-    # Length of the peptidic chain
-    L = len(res_names)
-    # Get the flex scores
-    flex_scores_peptide = [flex_scores2[res_names[i]] for i in range(L)]
-    s = int((window_size + 1)/2)
-    scale_factor = 1/s*(L-(window_size-1))
-    # Compute the FORMULA
-    all_aa_flex_val = []
-    for j in range(s,L-(s-1)):
-        k = 0
-        for i in range(1,s-1):
-            k = i/s*(flex_scores_peptide[j-1]+flex_scores_peptide[j+1])
-        #Flexibility score F of each aa
-        all_aa_flex_val.append(flex_scores_peptide[j-1] + k)
-
-
-    # Flexibility score F of the whole protein
-    # With scale factor
-    F_val = scale_factor*sum(all_aa_flex_val)
-    # Without scale factor
-    # F_val = sum(all_aa_flex)
-    return F_val, all_aa_flex_val
 
 def scale_function(all_aa_flex):
     """Obtain the flexibility aminoacids scores in a range of values between 0 and 1,
@@ -556,7 +507,7 @@ def scale_function(all_aa_flex):
     all_aa_flex_norm = list(map(lambda i:(i - min(all_aa_flex))/(max(all_aa_flex) - min(all_aa_flex)), all_aa_flex))
     return all_aa_flex_norm
 
-def get_sstructure(pdb_file, pdb_code, prot_chain):
+def get_sstructure(pdb_file, pdb_code, prot_chain=''):
     """Calculate the secondary structure and accesibility by using DSSP program
         - Needs pdb extension
 
@@ -578,7 +529,7 @@ def get_sstructure(pdb_file, pdb_code, prot_chain):
         However, we will convert DSSP's 8-state assignments into 3-state:
         [C - coil, E - extended (beta-strand), H - helix].
 
-    Return: sequence and sstructure
+    Return: string with secondary structure
     """
     from Bio.PDB.DSSP import DSSP
 
@@ -592,7 +543,10 @@ def get_sstructure(pdb_file, pdb_code, prot_chain):
     for i in range(len(dssp)):
         a_key = list(dssp.keys())[i]
 
-        if a_key[0] == prot_chain:
+        if prot_chain:
+            if a_key[0] == prot_chain:
+                sstructure += dssp[a_key][2]
+        else:
             sstructure += dssp[a_key][2]
 
     # Convert 8-state to 3-state
@@ -618,10 +572,11 @@ def get_hydrophobicity(fasta_file):
 
     # Parse Fasta File
     prot_id, prot_seq = extract_fasta_sequence(fasta_file)
+    prot_seq = str(prot_seq)
 
     # Obtain hydrophobicity scores
     X = ProteinAnalysis(prot_seq)
-    hydroph_scores_aa = X.protein_scale(window=9, param_dict=ProtParamData.kd)
+    hydroph_scores_aa = X.protein_scale(window=7, param_dict=ProtParamData.kd)
     gravy = sum(hydroph_scores_aa)/len(prot_seq)
 
     return hydroph_scores_aa, gravy
