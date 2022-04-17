@@ -625,3 +625,17 @@ def get_hydrophobicity(fasta_file):
     gravy = sum(hydroph_scores_aa)/len(prot_seq)
 
     return hydroph_scores_aa, gravy
+
+def from_sstructure_to_score(string_sstructure):
+    """
+    Transforms the string of secondary structures to scores for the flexibility plot.
+
+    Input: String with 3-state secondary structures
+
+    Return: List of scores for the secondary structure
+    """
+    string_sstructure = string_sstructure.replace('H','0')
+    string_sstructure = string_sstructure.replace('E','1')
+    string_sstructure = string_sstructure.replace('C','2')
+    list_sstructure = list(string_sstructure)
+    return list_sstructure
