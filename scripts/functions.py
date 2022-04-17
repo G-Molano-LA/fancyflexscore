@@ -167,13 +167,13 @@ def extract_fasta_sequence(fasta_file):
 def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
     # Needs the protein_codes and hits_dict from the get_pdb_homologs function
     """
-    Downloads a list of PDB files and stores them in the structures directory. Then, takes the files 
+    Downloads a list of PDB files and stores them in the structures directory. Then, takes the files
     from the "structures/" directory, parses them to obtain the resolution and returns the three
     hits with the highest e-value and a resolution higher than 2 Angstroms, by default.
 
     Input: List of protein codes from the BLAST and dictionary of the chains for each hit. Optional: Resolution
 
-    Return: List of three protein PDB codes and their respective chains. Directory called "structures" with 
+    Return: List of three protein PDB codes and their respective chains. Directory called "structures" with
     the PDB files in it in the format: "structures/pdb{code}.ent"
     """
     # SHOULD RETURN THE OUTPUT FILES?
@@ -197,7 +197,7 @@ def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
             #pdb_outfiles.append(f"structures/pdb{code}.pdb") and include variable in return
         else:
             os.remove(f"structures/pdb{code}.pdb")
-        
+
         if len(final_protein_codes) == 3:
             break
     return final_protein_codes, final_chains
@@ -635,7 +635,61 @@ def from_sstructure_to_score(string_sstructure):
     Return: List of scores for the secondary structure
     """
     string_sstructure = string_sstructure.replace('H','0')
-    string_sstructure = string_sstructure.replace('E','1')
-    string_sstructure = string_sstructure.replace('C','2')
+    string_sstructure = string_sstructure.replace('E','0.5')
+    string_sstructure = string_sstructure.replace('C','1')
     list_sstructure = list(string_sstructure)
     return list_sstructure
+
+def plot_heatmap(ax):
+    """ Function that plots the flexibility scores, the hidrophobicity scores and
+    the secondary structure by amino acid. Darker colors are asociated with less
+    flexible and less hidrophobic zones. In the same way, darker color is assigned
+    to helix structure and lighter one to coil structure.
+
+    OUTPUT: Plot with flexibility scores, hidrophobicity values and secondary structure.
+    """
+    import matplotlib.colors as mcolors
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    # 1. Save the needed values info
+    amino_acids = list()
+    flex_scores = list()
+    hidrophobicity = list()
+    sstructure = list()
+    # 2. Create the DataFrame
+    df = pd.DataFrame(list(zip(sstructure, hidrophobicity, flex_scores, aa)),
+         columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
+    # 3. Save the name of the DataFrame columns
+    col = df.columns
+    # 4. Define colors and create colormap
+    COLORS = ["#2C0C84", "#0C2C84", "#225EA8", "#1D91C0", "#41B6C4", "#7FCDBB", "#C7E9B4", "#FFFFCC"]
+    cmap = mcolors.LinearSegmentedColormap.from_list("colormap", COLORS, N=256)
+    # 5. Create the plot:
+    ## Iterate over features
+    for i in range(3):
+
+        x = df["amino_acids"]
+        y = [i]*len(x)
+
+        color = cmap(df[c[i]])
+        ax.scatter(x, y, color = color, s = 120) # s = shape
+
+    ## Remove all spines
+    ax.set_frame_on(False)
+    ## Set grid lines with some transparency
+    ax.grid(alpha=0.4)
+    ## Make sure grid lines are behind other objects
+    ax.set_axisbelow(True)
+    ## Set position for y ticks
+    ax.set_yticks(np.arange(len(c[:3])))
+    ## Set labels for the y ticks (the names of the types of plastic)
+    ax.set_yticklabels(c[:3])
+    ## Remove tick marks by setting their size to 0. Set text color to "0.3" (a type of grey)
+    ax.tick_params(size=0, colors="0.3")
+    ## Set label for horizontal axis.
+    ax.set_xlabel("Analysis", loc="center")
+
+    return ax
+
+    # fig, ax = plt.subplots(figsize(12,5))
+    # plot_heatmap(ax)
