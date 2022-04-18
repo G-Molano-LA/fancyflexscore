@@ -677,13 +677,13 @@ def plot_heatmap(ax, cmap, col, df_short, i, L = 0):
 
     return p
 
-# def plot_linear(df_plot):
-#     """
-#     """
-#     import seaborn as sns
-#     sns.set_theme(style="darkgrid")
-#     L = range(1,len(df_plot)+1)
-#     df_plot.insert(L)
-#     sns.lineplot(x = "L", y="flex_scores",
-#              hue="region", style="event",
-#              data=df_plot)
+def plot_linear(df_plot):
+    """
+    """
+    import seaborn as sns
+    sns.set_theme(style="darkgrid")
+    L = len(df_plot)
+    df_plot.insert(4, "aa_residue_num", range(1,L+1))
+    p = sns.lineplot(x = "aa_residue_num", y = "flex_scores",
+             data=df_plot)
+    p.set_title("Flex_scores distribution")

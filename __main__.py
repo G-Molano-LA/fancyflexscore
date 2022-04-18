@@ -1,4 +1,3 @@
-
 from functions import *
 import argparse
 # What is this files? https://stackoverflow.com/questions/4042905/what-is-main-py
@@ -139,7 +138,7 @@ df_results_out, df_results = data_frame_results(norm_flex_scores, hydroph_scores
 # Print dataframe
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import numpy as np
-df_results_out.to_csv(f'df_{output_file}.csv', index=False, sep='\t',
+df_results_out.to_csv(f'{output_file}_results.csv', index=False, sep='\t',
                 float_format = "%+.4f")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -163,7 +162,7 @@ df_short = pd.DataFrame()
 COLORS = ["#2C0C84", "#0C2C84", "#225EA8", "#1D91C0", "#41B6C4", "#7FCDBB", "#C7E9B4", "#FFFFCC"]
 cmap = mcolors.LinearSegmentedColormap.from_list("colormap", COLORS, N=256)
 # 5. Create the pdf to save the plot figures
-pdf = matplotlib.backends.backend_pdf.PdfPages(f"{output_file}.pdf")
+pdf = matplotlib.backends.backend_pdf.PdfPages(f"{output_file}_visualization.pdf")
 # 6. Iterate over the shorter data DataFrames
 for i in range(0,index-1):
     # 7. Save the DataFrame which we are working with
@@ -174,11 +173,17 @@ for i in range(0,index-1):
     fig.colorbar(p,ax=ax, label='Flex range: 1-Flexible; 0-Rigid')
     pdf.savefig(fig)
 
-# Create and save the last shorter DataFrame (smaller than the previous ones most
+# 8. Create and save the last shorter DataFrame (smaller than the previous ones most
 # of the times)
 df_short = df_results.iloc[50*(i+1):,:]
 L = len(df_results)
 fig, ax = plt.subplots(figsize=(12, 5))
-plot_heatmap(ax, cmap, col, df_short, i=0, L = L)
+p = plot_heatmap(ax, cmap, col, df_short, i=0, L = L)
+fig.colorbar(p,ax=ax, label='Flex range: 1-Flexible; 0-Rigid')
+pdf.savefig(fig)
+
+# 9. Create a final plot with the Flexibility Scores Distribution
+fig = plt.figure(figsize=(12,5))
+plot_linear(df_results)
 pdf.savefig(fig)
 pdf.close()
