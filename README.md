@@ -1,5 +1,4 @@
 # Setup
-MY ALE CHANGES
 Please, first of all, download this repository locally :
 ```
 git clone https://github.com/G-Molano-LA/structured-python.git
@@ -11,26 +10,6 @@ The protein flexibility depends on several parameters. There are some parameter 
 - Secondary structure  
 - Hidrofobicity
 
-Then, the key idea is to use this 3 parameters to calculate our flexibility score.
-
-To begin with, we have a protein sequence as a input that has no known pdb file. So.
-1. Search candidates that has similar structure with our target protein -> Pairwise aln (BLAST, jackhmmer or similar approaches)
-2. With these candidates, obtain regions of similarity -> Multiple **STRUCTURAL** aln
-3. Obtain b-factors of regions of similarity (perform an average of the candidates).
-4. Compute b-factor calculation:
-  1. Obtain the b-factor associated to the alfa-carbon of each aminoacid.
-  2. Standarize b-factors.
-5. Compute a flexibility score for **each aminoacid** based on:
-  - B-factors
-  - Secondary structure restraints (Can be calculated with the Bio.PDB.DSSP module)
-  - Hidrofobicity (Can be calculated with the Bio.PDB.DSSP module)
-6. Define a threshold to decide if the score for each aminoacid is flexible or not (1, 0).
-7. Scan the sequence by triplets to check for different state residues in the middle of the triplet to correct it.
-8. Sum all 0,1s and normalize by the number of aminoacids (average).
-9. As a final output we can give:
-  - Total protein score
-  - Score associated to each aminoacid
-
 # TO DO LIST
 8. Do documentation:
   -  [ ] Configure logging for all the modules
@@ -39,16 +18,7 @@ To begin with, we have a protein sequence as a input that has no known pdb file.
 
 
 # LIMITATIONS
-
 - Our approach do not take into account unkwnon regions as we do not obtain b-factors. To supply this missing values we thought to put the mean of b-factor, but, as we standarize this value later, we decided that makes no sense to put the mean (as gives 0 in standarization).
-
-# DEPENDENCIES
-- ICM installed
-
-# REMARKS  
-- Baldo's said : "You can use the b-factor to calculate the protein flexibility, however, this parameter is not totally correct as it contains cristall vibrations."
-- Gery said: b-factor del alpha fold = bad predictions (all have high values)  
-
 
 # Project Objective
 Programming a standalone program for solving a specific problems.
@@ -60,40 +30,15 @@ Programming a standalone program for solving a specific problems.
   - Parseable text output files
   - Graphical representation of the scores
 
-Proposed steps:
-- Multiple Sequence Alignment
-- Structural Alignment
-- Develop a flexibility score analyzing the alignments
-- Graphical  representation of the flexibility scores
-- Results analyzed for 2 specified families
-- Results analyzed for 2 other families
 
 PYT evaluation will take into account:
 - Program structure (tasks, classes, modules…)
 - Reusability, use of libraries.
 - Others
 
-# PYT Session 11 Objective
-Prepare the input and output interface for the SBI-PYT project.
-- When your project is executed as a standalone program, it will be
-expected to have some input and output arguments.
-
-# PYT Session 12 Objective
-- Install third-party packages
-  - Biopython, scipy, numpy, pandas, matplotlib, seaborn
 - Prepare the structure of the program:
   - Prepare the package directory structure
   - Prepare the setup.py file
-
-## The teacher has recommended to use a virtual environment to test the dependencies of the program. To use a virtual environment, se can use:
-```
-sudo apt-get install python3.9-venv
-pip install pyvenv
-python3 -m venv structural_py
-```
-Then, you will have a directory named `structured_py` which contains all the programs of the virtual env in the `bin` directory. Then, if you have to install something inside this virtual env, use the pip3 programm located at the `bin` directory. The installed programs will be saved on the `lib` directory.
-
-Note: I have included `structured_py/` in the `.gitignore` file, in order to avoid the upload of the virtual env in the repository.
 
 ## Writting the setup Script
 ```
