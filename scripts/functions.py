@@ -595,11 +595,18 @@ def from_sstructure_to_score(string_sstructure):
     list_sstructure = list(string_sstructure)
     return list_sstructure
 
-def plot_heatmap(ax):
+def plot_heatmap(ax,norm_flex_scores,hydroph_scores_aa,target_seq, sstructures,ws):
     """ Function that plots the flexibility scores, the hidrophobicity scores and
     the secondary structure by amino acid. Darker colors are asociated with less
     flexible and less hidrophobic zones. In the same way, darker color is assigned
     to helix structure and lighter one to coil structure.
+    INPUT:
+            ax:
+            norm_flex_scores:
+            hydroph_scores_aa:
+            target_seq:
+            sstructures:
+            ws: window_size
 
     OUTPUT: Plot with flexibility scores, hidrophobicity values and secondary structure.
     """
@@ -607,12 +614,12 @@ def plot_heatmap(ax):
     import matplotlib.pyplot as plt
     import pandas as pd
     # 1. Save the needed values info
-    amino_acids = list()
-    flex_scores = list()
-    hidrophobicity = list()
-    sstructure = list()
+    i = ( ws -1 )/2
+    L = len(target_seq)
+    amino_acids = list(target_seq)[i:L-i]
+    sstructure = list(sstructures)[i:L-i]
     # 2. Create the DataFrame
-    df = pd.DataFrame(list(zip(sstructure, hidrophobicity, flex_scores, aa)),
+    df = pd.DataFrame(list(zip(sstructure, hydroph_scores, norm_flex_scores, amino_acids)),
          columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
     # 3. Save the name of the DataFrame columns
     col = df.columns
@@ -623,7 +630,9 @@ def plot_heatmap(ax):
     ## Iterate over features
     for i in range(3):
 
-        x = df["amino_acids"]
+        # x = df["amino_acids"]
+
+        x = list(range(0,len(amino_acids)))
         y = [i]*len(x)
 
         color = cmap(df[c[i]])
@@ -645,6 +654,3 @@ def plot_heatmap(ax):
     ax.set_xlabel("Analysis", loc="center")
 
     return ax
-
-    # fig, ax = plt.subplots(figsize(12,5))
-    # plot_heatmap(ax)
