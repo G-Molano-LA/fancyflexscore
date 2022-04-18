@@ -597,7 +597,7 @@ def from_sstructure_to_score(string_sstructure):
             list_sstructure[index] = 1
     return list_sstructure
 
-def data_frame_results(norm_flex_scores,hydroph_scores,target_seq, list_sstructure, ws):
+def data_frame_results(norm_flex_scores,hydroph_scores,target_seq, list_sstructure, sstructures, ws):
     """
     """
     import pandas as pd
@@ -607,10 +607,12 @@ def data_frame_results(norm_flex_scores,hydroph_scores,target_seq, list_sstructu
     amino_acids = list(target_seq)[i:L-i]
     sstructure = list_sstructure[i:L-i]
     # 2. Create the DataFrame
-    df = pd.DataFrame(list(zip(sstructure, hydroph_scores, norm_flex_scores, amino_acids)),
+    df_sstruct_num = pd.DataFrame(list(zip(sstructure, hydroph_scores, norm_flex_scores, amino_acids)),
     columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
-    print(df)
-    return df
+    df_sstruc_sym = pd.DataFrame(list(zip(sstructures, hydroph_scores, norm_flex_scores, amino_acids)),
+    columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
+
+    return df_sstruc_sym, df_sstruct_num
 
 def plot_heatmap(ax, cmap, col, df_short, aa, l, i, L):
     """ Function that plots the flexibility scores, the hidrophobicity scores and

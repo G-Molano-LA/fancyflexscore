@@ -132,14 +132,15 @@ list_sstructures = from_sstructure_to_score(sstructures)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Data frame results
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-df_results = data_frame_results(norm_flex_scores, hydroph_scores_aa, target_seq, list_sstructures, ws = 7)
+df_results_out, df_results = data_frame_results(norm_flex_scores, hydroph_scores_aa, target_seq,
+            list_sstructures, sstructures, ws = 7)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Print dataframe
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #np.savetxt(r'c:\data\np.txt', df_results.values, fmt='%d')
-# import numpy as np
-# np.savetxt(f'df_{output_file}', df_results.values, delimiter='\t')
+import numpy as np
+df_results_out.to_csv(f'df_{output_file}.csv', index=False, sep='\t', float_format = "%+.4f")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Plot results
