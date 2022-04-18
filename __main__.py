@@ -44,7 +44,7 @@ parser.add_argument('-o', '--output',
                     dest = "outfile",
                     action = "store",
                     default = "results",
-                    help = "Output file with the flexibility score and a graphic representation of the flexibility by aminoacid")
+                    help = "Output filename. It generates two files: filename_results.csv and filename_visualization.pdf (default: results).")
 
 # Verbose argument
 parser.add_argument('-v', '--verbose',
@@ -59,7 +59,7 @@ parser.add_argument('-ws', '--window_size',
                     type = int,
                     action="store",
                     default=7,
-                    choices=[1,3,5,7,9,13],
+                    choices=[1,3,5,7,9,11,13],
                     help="Select this option to change the window_size when computing the flexibility score")
 
 options = parser.parse_args()

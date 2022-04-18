@@ -63,7 +63,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
         protein_chains = list(hits_dict.values())
 
         if len(hits_dict) < 12: # arbitrary value to ensure we have an enough number of proteins
-            print("Less than 7 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
+            print("Less than 12 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
             # Psiblast db
             if os.path.isdir('./db/psiblast') and os.path.isdir('./db/blastp'):
                 if os.listdir("./db/psiblast") and os.listdir("./db/blastp"):
@@ -257,6 +257,21 @@ def msa(pdb_seqs_filename):
     return msa_obj
 
 def get_modified_bfactors(msa_seqs, all_norm_bfactors, target_norm_bfactors, all_matrices):
+    """ Obtain b-factors for target protein based on MSA.
+
+    We scan the multiple alignment and follow these rules:
+        - remove the possible ”X” amino acids (missing residues)
+        - If there were coincidences between target and the three homologs we save
+            the α-C b-factors b-factors and we compute the mean of them.
+        - If two homologs share the same amino acid with the target, same as before
+        - If only one homolog shares the amino acid, we took its α-C b-factors.
+        - When there wasn’t no homolog amino acid aligned with our target amino
+            acid, we use the improved amino acid flexibility parameter computed by an article[1]
+
+    Ref:
+        [1]: Smith, D.K., Radivojac, P., Obradovic,Z., Dunker, A.K. \& Zhu, G.
+            Improved amino acid flexibility parameters, Protein Sci. 2003; 12:1060-1072
+    """
     from statistics import mean
 
     flex_scores = {
