@@ -26,6 +26,11 @@ The installation of the above programs can be automatically handle by executing 
 ```
 
 # Running the program
+The user can obtain information about the program and the arguments that should write by:
+```
+python3 fancyflexprot -h
+```
+
 For running the program, the user should execute:
 ```
 python3 fancyflexprot -i input_file -o output_file_name -ws window_size -v
