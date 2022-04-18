@@ -123,3 +123,10 @@ else:
 # Get Hidrobicity
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 hydroph_scores_aa, gravy = get_hydrophobicity(input_file)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Plot results
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(figsize(12,5))
+plot_heatmap(ax, norm_flex_scores,hydroph_scores_aa,target_seq, sstructures)
