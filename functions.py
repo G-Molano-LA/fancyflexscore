@@ -63,7 +63,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
         protein_chains = list(hits_dict.values())
 
         if len(hits_dict) < 12: # arbitrary value to ensure we have an enough number of proteins
-            print("Less than 7 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
+            print("Less than 7 proteins were found with that threshold, remote homologs will be searched...")
             # Psiblast db
             if os.path.isdir('./db/psiblast') and os.path.isdir('./db/blastp'):
                 if os.listdir("./db/psiblast") and os.listdir("./db/blastp"):
