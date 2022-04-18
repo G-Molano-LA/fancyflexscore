@@ -63,7 +63,7 @@ def get_pdb_homologs(input_file, E_VALUE_THRESH = 1e-20):
         protein_chains = list(hits_dict.values())
 
         if len(hits_dict) < 12: # arbitrary value to ensure we have an enough number of proteins
-            print("Less than 7 proteins were found with that threshold, remote homologs will be searched...")
+            print("Less than 7 proteins were found with that threshold, remote homologs will be searched... Introduce a higher threshold if only close homologs are desired")
             # Psiblast db
             if os.path.isdir('./db/psiblast') and os.path.isdir('./db/blastp'):
                 if os.listdir("./db/psiblast") and os.listdir("./db/blastp"):
@@ -191,13 +191,10 @@ def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
         # Read pdb file
         structure = get_pdb_structure(f"structures/pdb{code}.ent", code)
         # Evaluate resolution
-        if structure.header['resolution']:
-            if structure.header['resolution'] <= resolution:
-                final_protein_codes.append(code)
-                final_chains.append(hits_dict[code])
-                #pdb_outfiles.append(f"structures/pdb{code}.pdb") and include variable in return
-            else:
-                os.remove(f"structures/pdb{code}.ent")
+        if structure.header['resolution'] <= resolution:
+            final_protein_codes.append(code)
+            final_chains.append(hits_dict[code])
+            #pdb_outfiles.append(f"structures/pdb{code}.pdb") and include variable in return
         else:
             os.remove(f"structures/pdb{code}.ent")
 
@@ -600,15 +597,8 @@ def from_sstructure_to_score(string_sstructure):
             list_sstructure[index] = 1
     return list_sstructure
 
-def data_frame_results(norm_flex_scores,hydroph_scores, target_seq, list_sstructure, sstructures, ws):
-    """ Functions to save the amino acids sequence, flexibility score, hydrophobicity
-    score and secondary structure of the protein in a DataFrame. The function takes
-    into account the limitation of losing amino acids with the window_size.
-    It will return two DataFrames, one to write the output file (df_results)
-    with the "origianl" secondary structure, and the other one to use in the plot
-    function with the secondary structure transformed to numberes (df_plot).
-
-    Output: DataFrames df_results and df_plot with results.
+def data_frame_results(norm_flex_scores,hydroph_scores_aa,target_seq, list_sstructure, ws):
+    """
     """
     import pandas as pd
     # 1. Save the needed values info
@@ -616,47 +606,48 @@ def data_frame_results(norm_flex_scores,hydroph_scores, target_seq, list_sstruct
     L = len(target_seq)
     amino_acids = list(target_seq)[i:L-i]
     sstructure = list_sstructure[i:L-i]
-    hydroph_scores_reverse = [num * -1 for num in hydroph_scores]
+    # 2. Create the DataFrame
+    df = pd.DataFrame(list(zip(sstructure, hydroph_scores_aa, norm_flex_scores, amino_acids)),
+    columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
+    print(df)
+    return df
 
-    # 2. Create the DataFrames
-    ## DataFrame adapted to plot the results:
-    df_plot = pd.DataFrame(list(zip(sstructure, hydroph_scores_reverse, norm_flex_scores, amino_acids)),
-    columns = ["sstructure","hydrophobicity", "flex_scores", "amino_acids"])
-    ## DataFrame with "real" results
-    df_results = pd.DataFrame(list(zip(amino_acids, norm_flex_scores, hydroph_scores, sstructures)),
-    columns = ["amino_acids","flex_scores","hydrophobicity","sstructure"])
-
-    return df_results, df_plot
-
-def plot_heatmap(ax, cmap, col, df_short, i, L = 0):
-    """ Function that plots the flexibility scores, the hydrophobicity scores and
+def plot_heatmap(ax, df_short, l, i, L):
+    """ Function that plots the flexibility scores, the hidrophobicity scores and
     the secondary structure by amino acid. Darker colors are asociated with less
-    flexible and less hydrophobic zones. In the same way, darker color is assigned
+    flexible and less hidrophobic zones. In the same way, darker color is assigned
     to helix structure and lighter one to coil structure.
     INPUT:
-            ax: argument that will represent the plot
-            cmap: scale_colors
-            col: data frame column names with the names features to represent
-            df_short: df contianing part of the whole df (50 values in this case)
-            i: index that represents the splitted df that is being plotted
-            L: len of the whole data frame
+            ax:
+            norm_flex_scores:
+            hydroph_scores_aa:
+            target_seq:
+            sstructures:
+            ws: window_size
 
-    OUTPUT: Plot with flexibility scores, hydrophobicity values and secondary structure.
+    OUTPUT: Plot with flexibility scores, hidrophobicity values and secondary structure.
     """
-    import numpy as np
+    import matplotlib.colors as mcolors
     import matplotlib.pyplot as plt
-    # 1. Save information from the df_short
-    aa = df_short["amino_acids"]
-    l = len(df_short)
+    import pandas as pd
+    import numpy as np
 
-    # 2. Create the plot:
+    col = df_short.columns
+    aa = df_short["amino_acids"]
+    # 4. Define colors and create colormap
+    COLORS = ["#2C0C84", "#0C2C84", "#225EA8", "#1D91C0", "#41B6C4", "#7FCDBB", "#C7E9B4", "#FFFFCC"]
+    cmap = mcolors.LinearSegmentedColormap.from_list("colormap", COLORS, N=256)
+    # 5. Create the plot:
     ## Iterate over features
     for j in range(0,3):
 
+        # x = df["amino_acids"]
+
         x = list(range(0,l))
-        y = [j]*len(x)
+        y = [i]*len(x)
+        #print(df_short[col[j]])
         color = cmap(df_short[col[j]])
-        p = ax.scatter(x, y, color = color, cmap=cmap, s = 120) # s = shape
+        ax.scatter(x, y, color = color, s = 120) # s = shape
 
     ## Remove all spines
     ax.set_frame_on(False)
@@ -665,9 +656,9 @@ def plot_heatmap(ax, cmap, col, df_short, i, L = 0):
     ## Make sure grid lines are behind other objects
     ax.set_axisbelow(True)
     ## Set position for x ticks
-    ax.set_xticks(np.arange(len(aa)))
+    ax.set_xticks(np.arange(len(aa[L+l*i:L+l*(i+1)])))
     ## Set labels for the x ticks (the names of the types of plastic)
-    ax.set_xticklabels(aa)
+    ax.set_xticklabels(aa[L+l*i:L+l*(i+1)])
     ## Set position for y ticks
     ax.set_yticks(np.arange(len(col[:3])))
     ## Set labels for the y ticks (the names of the types of plastic)
@@ -676,17 +667,4 @@ def plot_heatmap(ax, cmap, col, df_short, i, L = 0):
     ax.tick_params(size=0, colors="0.3")
     ## Set label for horizontal axis.
     ax.set_xlabel("Analysis", loc="center")
-    ## Add leyend
-
-    return p
-
-def plot_linear(df_plot):
-    """
-    """
-    import seaborn as sns
-    sns.set_theme(style="darkgrid")
-    L = len(df_plot)
-    df_plot.insert(4, "aa_residue_num", range(1,L+1))
-    p = sns.lineplot(x = "aa_residue_num", y = "flex_scores",
-             data=df_plot)
-    p.set_title("Flex_scores distribution")
+    return ax

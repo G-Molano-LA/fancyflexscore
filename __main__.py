@@ -1,3 +1,4 @@
+
 from functions import *
 import argparse
 # What is this files? https://stackoverflow.com/questions/4042905/what-is-main-py
@@ -103,7 +104,7 @@ norm_flex_scores = scale_function(flex_scores)
 # !!! fasta id must contain only the uniprot code. If there is chain, mustbe specified by uniprotid_chain
 target_id, target_seq = extract_fasta_sequence(input_file)
 # Checking if the target file has chain or not
-split_id = target_id.split(':')
+split_id = target_id.split('_')
 
 if len(split_id) == 2:
     target_id = split_id[0]
@@ -131,15 +132,8 @@ list_sstructures = from_sstructure_to_score(sstructures)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Data frame results
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-df_results_out, df_results = data_frame_results(norm_flex_scores, hydroph_scores_aa, target_seq,
-            list_sstructures, sstructures, ws = 7)
+df_results = data_frame_results(norm_flex_scores, hydroph_scores_aa, target_seq, list_sstructures, ws = 7)
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Print dataframe
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-import numpy as np
-df_results_out.to_csv(f'{output_file}_results.txt', index=False, sep='\t',
-                float_format = "%+.4f")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Plot results
@@ -147,43 +141,20 @@ df_results_out.to_csv(f'{output_file}_results.txt', index=False, sep='\t',
 import pandas as pd
 import math
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.backends.backend_pdf
-
-# 1. Index to divide the DataFrame into smaller data frames of 50 values by column
-# This step is needen in order to get a clear visualization of the data as
-# we are working with large proteins
 index = math.ceil(len(df_results)/50)
-# 2. Save the columns of the whole Data Frame
-col = df_results.columns
-# 3. Generate a empty DataFrame
-df_short = pd.DataFrame()
-# 4. Generate the palette colors of the plot
-COLORS = ["#2C0C84", "#0C2C84", "#225EA8", "#1D91C0", "#41B6C4", "#7FCDBB", "#C7E9B4", "#FFFFCC"]
-cmap = mcolors.LinearSegmentedColormap.from_list("colormap", COLORS, N=256)
-# 5. Create the pdf to save the plot figures
-pdf = matplotlib.backends.backend_pdf.PdfPages(f"{output_file}_visualization.pdf")
-# 6. Iterate over the shorter data DataFrames
-for i in range(0,index-1):
-    # 7. Save the DataFrame which we are working with
-    df_short = df_results.iloc[50*i:50*(i+1),:]
-    # 8. Create the figure and call the function to plot the data
-    fig, ax = plt.subplots(figsize=(12, 5))
-    p = plot_heatmap(ax, cmap, col, df_short,i , L = 0)
-    fig.colorbar(p,ax=ax, label='Flex range: 1-Flexible; 0-Rigid')
-    pdf.savefig(fig)
-
-# 8. Create and save the last shorter DataFrame (smaller than the previous ones most
-# of the times)
-df_short = df_results.iloc[50*(i+1):,:]
-L = len(df_results)
+#df_short = pd.DataFrame()
+df_short = df_results.iloc[:50,:]
+l=len(df_short)
+i = 0
+# for i in range(0,1): #for i in range(0,index):
+#     fig, ax = plt.subplots(figsize=(12, 5))
+#     df_short = df_results.iloc[50*i:50*(i+1),:]
+#     l = len(df_short)
 fig, ax = plt.subplots(figsize=(12, 5))
-p = plot_heatmap(ax, cmap, col, df_short, i=0, L = L)
-fig.colorbar(p,ax=ax, label='Flex range: 1-Flexible; 0-Rigid')
-pdf.savefig(fig)
-
-# 9. Create a final plot with the Flexibility Scores Distribution
-fig = plt.figure(figsize=(12,5))
-plot_linear(df_results)
-pdf.savefig(fig)
-pdf.close()
+plot_heatmap(ax, df_short, l,i,L = 0)
+fig.savefig("preprobe.png")
+# df_short = df_results.iloc[50*(i+1):,:]
+# L = len(df_results)
+# l = len(df_short)
+# fig, ax = plt.subplots(figsize=(12, 5))
+# plot_heatmap(ax, df_short, l, i=0, L = L)
