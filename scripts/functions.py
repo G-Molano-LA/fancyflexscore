@@ -589,10 +589,14 @@ def from_sstructure_to_score(string_sstructure):
 
     Return: List of scores for the secondary structure
     """
-    string_sstructure = string_sstructure.replace('H','0')
-    string_sstructure = string_sstructure.replace('E','0.5')
-    string_sstructure = string_sstructure.replace('C','1')
     list_sstructure = list(string_sstructure)
+    for index, item in enumerate(list_sstructure):
+        if item == "H":
+            list_sstructure[index] = 0
+        elif item == "E":
+            list_sstructure[index] = 0.5
+        elif item == "C":
+            list_sstructure[index] = 1
     return list_sstructure
 
 def plot_heatmap(ax,norm_flex_scores,hydroph_scores_aa,target_seq, sstructures,ws):
