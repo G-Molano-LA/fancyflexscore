@@ -138,7 +138,7 @@ df_results_out, df_results = data_frame_results(norm_flex_scores, hydroph_scores
 # Print dataframe
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import numpy as np
-df_results_out.to_csv(f'{output_file}_results.csv', index=False, sep='\t',
+df_results_out.to_csv(f'{output_file}_results.txt', index=False, sep='\t',
                 float_format = "%+.4f")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
