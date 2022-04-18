@@ -176,7 +176,6 @@ def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
     Return: List of three protein PDB codes and their respective chains. Directory called "structures" with
     the PDB files in it in the format: "structures/pdb{code}.ent"
     """
-    # SHOULD RETURN THE OUTPUT FILES?
 
     from Bio.PDB.PDBList import PDBList
     import os
@@ -209,13 +208,8 @@ def get_aln_sequences(input_file, pdb_outfiles, pdb_codes, chains):
     """
 
     from Bio import SeqIO
-    ## To track events
-    import logging
     ## To hide warnings
     import warnings
-
-    # 1. Obtain PDB files for candidates and target
-    logging.info("Obtaining PDB files for candidate and target proteins")
 
 
     # Save the fasta_sequences
@@ -439,23 +433,7 @@ def normalize_bfactor(bfactor):
 
 
 ## Flexibility
-    # [?] Si tenemos b-values de nuestra proteina problema, yo aplicaría la fórmula
-    # directamente
-    # Si no los tenemos, he pensado en dos posibles approachs:
-    # 1 APPROACH
-    # Sobre lo que tenemos hecho hasta ahora, calcularia la media de los diferentes
-    # valores del b-factor de un aa, dados por las proteinas homologas. Luego,
-    # aplicaría la formula del paper https://www.sciencedirect.com/science/article/pii/S000527361300206X?via%3Dihub#bb0145
-    # del apartado 2.3.
-    # 2 APPROACH
-    # Pillar un homólogo de referencia directamente y usar los valores de flexibilada
-    # obtenidos en el paper https://onlinelibrary.wiley.com/doi/full/10.1110/ps.0236203
-    # (los resultados están en las Tablas 3 y 4, de hecho en el primer paper
-    # aplican la formula tomando como valores lambda los recogidos en este ultimo)
-
-# FIRST APPROACH
 def flexibility(final_bfactors, window_size):
-    # [?] Valorar si incluir el scale_factor o no
     """ This function will return a flexibility score for the total protein and a
         list with the flexibility of each aa, taking into account how flexible or
         rigid are the neighbourhoods of each amino acid.
@@ -490,10 +468,7 @@ def flexibility(final_bfactors, window_size):
 
 
     # Flexibility score F of the whole protein
-    # With scale factor
     F = scale_factor*sum(all_aa_flex)
-    # Without scale factor
-    # F = sum(all_aa_flex)
     return F, all_aa_flex
 
 def scale_function(all_aa_flex):
@@ -559,7 +534,7 @@ def get_sstructure(pdb_file, pdb_code, prot_chain=''):
 
     return sstructure
 
-def get_hydrophobicity(fasta_file):
+def get_hydrophobicity(fasta_file,window_size):
     """
     Calculates the hydrophobicity score for each aminoacid and for the global protein (GRAVY)
 
@@ -576,7 +551,7 @@ def get_hydrophobicity(fasta_file):
 
     # Obtain hydrophobicity scores
     X = ProteinAnalysis(prot_seq)
-    hydroph_scores_aa = X.protein_scale(window=7, param_dict=ProtParamData.kd)
+    hydroph_scores_aa = X.protein_scale(window = window_size, param_dict=ProtParamData.kd)
     gravy = sum(hydroph_scores_aa)/len(prot_seq)
 
     return hydroph_scores_aa, gravy
@@ -597,57 +572,63 @@ def from_sstructure_to_score(string_sstructure):
             list_sstructure[index] = 1
     return list_sstructure
 
-def data_frame_results(norm_flex_scores,hydroph_scores_aa,target_seq, list_sstructure, ws):
-    """
+def data_frame_results(norm_flex_scores,hydroph_scores, target_seq, list_sstructure, sstructures, window_size):
+    """ Functions to save the amino acids sequence, flexibility score, hydrophobicity
+    score and secondary structure of the protein in a DataFrame. The function takes
+    into account the limitation of losing amino acids with the window_size.
+    It will return two DataFrames, one to write the output file (df_results)
+    with the "origianl" secondary structure, and the other one to use in the plot
+    function with the secondary structure transformed to numberes (df_plot).
+
+    Output: DataFrames df_results and df_plot with results.
     """
     import pandas as pd
     # 1. Save the needed values info
-    i = int(( ws -1 )/2)
+    i = int(( window_size - 1 )/2)
     L = len(target_seq)
     amino_acids = list(target_seq)[i:L-i]
     sstructure = list_sstructure[i:L-i]
-    # 2. Create the DataFrame
-    df = pd.DataFrame(list(zip(sstructure, hydroph_scores_aa, norm_flex_scores, amino_acids)),
-    columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
-    print(df)
-    return df
+    hydroph_scores_reverse = [num * -1 for num in hydroph_scores]
 
-def plot_heatmap(ax, df_short, l, i, L):
-    """ Function that plots the flexibility scores, the hidrophobicity scores and
+    # 2. Create the DataFrames
+    ## DataFrame adapted to plot the results:
+    df_plot = pd.DataFrame(list(zip(sstructure, hydroph_scores_reverse, norm_flex_scores, amino_acids)),
+    columns = ["sstructure","hydrophobicity", "flex_scores", "amino_acids"])
+    ## DataFrame with "real" results
+    df_results = pd.DataFrame(list(zip(amino_acids, norm_flex_scores, hydroph_scores, sstructures)),
+    columns = ["amino_acids","flex_scores","hydrophobicity","sstructure"])
+
+    return df_results, df_plot
+
+def plot_heatmap(ax, cmap, col, df_short, i, L = 0):
+    """ Function that plots the flexibility scores, the hydrophobicity scores and
     the secondary structure by amino acid. Darker colors are asociated with less
-    flexible and less hidrophobic zones. In the same way, darker color is assigned
+    flexible and less hydrophobic zones. In the same way, darker color is assigned
     to helix structure and lighter one to coil structure.
     INPUT:
-            ax:
-            norm_flex_scores:
-            hydroph_scores_aa:
-            target_seq:
-            sstructures:
-            ws: window_size
+            ax: argument that will represent the plot
+            cmap: scale_colors
+            col: data frame column names with the names features to represent
+            df_short: df contianing part of the whole df (50 values in this case)
+            i: index that represents the splitted df that is being plotted
+            L: len of the whole data frame
 
-    OUTPUT: Plot with flexibility scores, hidrophobicity values and secondary structure.
+    OUTPUT: Plot with flexibility scores, hydrophobicity values and secondary structure.
     """
-    import matplotlib.colors as mcolors
-    import matplotlib.pyplot as plt
-    import pandas as pd
     import numpy as np
-
-    col = df_short.columns
+    import matplotlib.pyplot as plt
+    # 1. Save information from the df_short
     aa = df_short["amino_acids"]
-    # 4. Define colors and create colormap
-    COLORS = ["#2C0C84", "#0C2C84", "#225EA8", "#1D91C0", "#41B6C4", "#7FCDBB", "#C7E9B4", "#FFFFCC"]
-    cmap = mcolors.LinearSegmentedColormap.from_list("colormap", COLORS, N=256)
-    # 5. Create the plot:
+    l = len(df_short)
+
+    # 2. Create the plot:
     ## Iterate over features
     for j in range(0,3):
 
-        # x = df["amino_acids"]
-
         x = list(range(0,l))
-        y = [i]*len(x)
-        #print(df_short[col[j]])
+        y = [j]*len(x)
         color = cmap(df_short[col[j]])
-        ax.scatter(x, y, color = color, s = 120) # s = shape
+        p = ax.scatter(x, y, color = color, cmap=cmap, s = 120) # s = shape
 
     ## Remove all spines
     ax.set_frame_on(False)
@@ -656,9 +637,9 @@ def plot_heatmap(ax, df_short, l, i, L):
     ## Make sure grid lines are behind other objects
     ax.set_axisbelow(True)
     ## Set position for x ticks
-    ax.set_xticks(np.arange(len(aa[L+l*i:L+l*(i+1)])))
+    ax.set_xticks(np.arange(len(aa)))
     ## Set labels for the x ticks (the names of the types of plastic)
-    ax.set_xticklabels(aa[L+l*i:L+l*(i+1)])
+    ax.set_xticklabels(aa)
     ## Set position for y ticks
     ax.set_yticks(np.arange(len(col[:3])))
     ## Set labels for the y ticks (the names of the types of plastic)
@@ -667,4 +648,20 @@ def plot_heatmap(ax, df_short, l, i, L):
     ax.tick_params(size=0, colors="0.3")
     ## Set label for horizontal axis.
     ax.set_xlabel("Analysis", loc="center")
-    return ax
+    ## Add leyend
+
+    return p
+
+def plot_linear(df_plot):
+    """ Function that plots the distribution of the flexibility scores of the
+    protein amino acids.
+
+    OUTPUT: plot
+    """
+    import seaborn as sns
+    sns.set_theme(style="darkgrid")
+    L = len(df_plot)
+    df_plot.insert(4, "aa_residue_num", range(1, L+1))
+    p = sns.lineplot(x = "aa_residue_num", y = "flex_scores",
+             data=df_plot)
+    p.set_title("Flex_scores distribution")
