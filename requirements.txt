@@ -1,5 +1,8 @@
 # pip install -r requirements.txt
 
-biopython
-matplotlib
-statistics
+biopython >= 1.79
+matplotlib >= 3.3.4
+requests >= 2.25.1
+pandas >= 1.4.1
+seaborn >= 0.11.2
+numpy >= 1.20
