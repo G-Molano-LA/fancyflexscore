@@ -103,7 +103,7 @@ norm_flex_scores = scale_function(flex_scores)
 # !!! fasta id must contain only the uniprot code. If there is chain, mustbe specified by uniprotid_chain
 target_id, target_seq = extract_fasta_sequence(input_file)
 # Checking if the target file has chain or not
-split_id = target_id.split('_')
+split_id = target_id.split(':')
 
 if len(split_id) == 2:
     target_id = split_id[0]
