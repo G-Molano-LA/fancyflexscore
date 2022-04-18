@@ -7,3 +7,4 @@ structural_py/
 db/
 structures/
 results.xml
+__pycaches__/

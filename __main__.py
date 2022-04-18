@@ -125,8 +125,52 @@ else:
 hydroph_scores_aa, gravy = get_hydrophobicity(input_file)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Get scores for the secondary structure
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+list_sstructures = from_sstructure_to_score(sstructures)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Data frame results
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+df_results = data_frame_results(norm_flex_scores, hydroph_scores_aa, target_seq, list_sstructures, ws = 7)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Print dataframe
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#np.savetxt(r'c:\data\np.txt', df_results.values, fmt='%d')
+# import numpy as np
+# np.savetxt(f'df_{output_file}', df_results.values, delimiter='\t')
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Plot results
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import pandas as pd
+import math
 import matplotlib.pyplot as plt
-fig, ax = plt.subplots(figsize(12,5))
-plot_heatmap(ax, norm_flex_scores,hydroph_scores_aa,target_seq, sstructures)
+import matplotlib.colors as mcolors
+import matplotlib.backends.backend_pdf
+
+index = math.ceil(len(df_results)/50)
+df_short = pd.DataFrame()
+col = df_results.columns
+COLORS = ["#2C0C84", "#0C2C84", "#225EA8", "#1D91C0", "#41B6C4", "#7FCDBB", "#C7E9B4", "#FFFFCC"]
+cmap = mcolors.LinearSegmentedColormap.from_list("colormap", COLORS, N=256)
+pdf = matplotlib.backends.backend_pdf.PdfPages(f"{output_file}.pdf")
+
+for i in range(0,index-1): #for i in range(0,index):
+
+    df_short = df_results.iloc[50*i:50*(i+1),:]
+    aa = df_short["amino_acids"]
+    l = len(df_short)
+    fig, ax = plt.subplots(figsize=(12, 5))
+    plot_heatmap(ax, cmap, col, df_short, aa ,l ,i , L = 0)
+    pdf.savefig(fig)
+
+df_short = df_results.iloc[50*(i+1):,:]
+aa = df_short["amino_acids"]
+L = len(df_results)
+l = len(df_short)
+fig, ax = plt.subplots(figsize=(12, 5))
+plot_heatmap(ax, cmap, col, df_short, aa, l, i=0, L = L)
+pdf.savefig(fig)
+pdf.close()
