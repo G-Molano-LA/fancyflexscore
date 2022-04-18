@@ -618,17 +618,17 @@ def data_frame_results(norm_flex_scores,hydroph_scores, target_seq, list_sstruct
     # 2. Create the DataFrames
     ## DataFrame adapted to plot the results:
     df_plot = pd.DataFrame(list(zip(sstructure, hydroph_scores_reverse, norm_flex_scores, amino_acids)),
-    columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
+    columns = ["sstructure","hydrophobicity", "flex_scores", "amino_acids"])
     ## DataFrame with "real" results
     df_results = pd.DataFrame(list(zip(amino_acids, norm_flex_scores, hydroph_scores, sstructures)),
-    columns = ["amino_acids","flex_scores","hidrophobicity","sstructure"])
+    columns = ["amino_acids","flex_scores","hydrophobicity","sstructure"])
 
     return df_results, df_plot
 
 def plot_heatmap(ax, cmap, col, df_short, i, L = 0):
-    """ Function that plots the flexibility scores, the hidrophobicity scores and
+    """ Function that plots the flexibility scores, the hydrophobicity scores and
     the secondary structure by amino acid. Darker colors are asociated with less
-    flexible and less hidrophobic zones. In the same way, darker color is assigned
+    flexible and less hydrophobic zones. In the same way, darker color is assigned
     to helix structure and lighter one to coil structure.
     INPUT:
             ax: argument that will represent the plot
@@ -638,7 +638,7 @@ def plot_heatmap(ax, cmap, col, df_short, i, L = 0):
             i: index that represents the splitted df that is being plotted
             L: len of the whole data frame
 
-    OUTPUT: Plot with flexibility scores, hidrophobicity values and secondary structure.
+    OUTPUT: Plot with flexibility scores, hydrophobicity values and secondary structure.
     """
     import numpy as np
     import matplotlib.pyplot as plt
