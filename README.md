@@ -1,6 +1,6 @@
 # The FancyFlexScore
 
-Here, you will find a short review about FancyFlexScore. Further information can be found in report pdf.  
+**Here, you will find a short review about FancyFlexScore. Further information can be found in report pdf.**  
 The main purpose of this project is to provide an assessment of the flexibility of a protein given its sequence. In detail, the function outputs a text file containing the flexibility scores per amino acid in addition to a graphical representation of these scores along the sequence. Furthermore, both outputs include complementary information regarding the hydrophobicity and secondary structures of the protein, to provide a comparison with parameters theoretically related to flexibility.
 
 # Prerequisites
