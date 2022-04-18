@@ -597,8 +597,15 @@ def from_sstructure_to_score(string_sstructure):
             list_sstructure[index] = 1
     return list_sstructure
 
-def data_frame_results(norm_flex_scores,hydroph_scores,target_seq, list_sstructure, sstructures, ws):
-    """
+def data_frame_results(norm_flex_scores,hydroph_scores, target_seq, list_sstructure, sstructures, ws):
+    """ Functions to save the amino acids sequence, flexibility score, hydrophobicity
+    score and secondary structure of the protein in a DataFrame. The function takes
+    into account the limitation of losing amino acids with the window_size.
+    It will return two DataFrames, one to write the output file (df_results)
+    with the "origianl" secondary structure, and the other one to use in the plot
+    function with the secondary structure transformed to numberes (df_plot).
+
+    Output: DataFrames df_results and df_plot with results.
     """
     import pandas as pd
     # 1. Save the needed values info
@@ -606,45 +613,47 @@ def data_frame_results(norm_flex_scores,hydroph_scores,target_seq, list_sstructu
     L = len(target_seq)
     amino_acids = list(target_seq)[i:L-i]
     sstructure = list_sstructure[i:L-i]
-    # 2. Create the DataFrame
-    df_sstruct_num = pd.DataFrame(list(zip(sstructure, hydroph_scores, norm_flex_scores, amino_acids)),
-    columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
-    df_sstruc_sym = pd.DataFrame(list(zip(sstructures, hydroph_scores, norm_flex_scores, amino_acids)),
-    columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
+    hydroph_scores_reverse = [num * -1 for num in hydroph_scores]
 
-    return df_sstruc_sym, df_sstruct_num
+    # 2. Create the DataFrames
+    ## DataFrame adapted to plot the results:
+    df_plot = pd.DataFrame(list(zip(sstructure, hydroph_scores_reverse, norm_flex_scores, amino_acids)),
+    columns = ["sstructure","hidrophobicity", "flex_scores", "amino_acids"])
+    ## DataFrame with "real" results
+    df_results = pd.DataFrame(list(zip(amino_acids, norm_flex_scores, hydroph_scores, sstructures)),
+    columns = ["amino_acids","flex_scores","hidrophobicity","sstructure"])
 
-def plot_heatmap(ax, cmap, col, df_short, aa, l, i, L):
+    return df_results, df_plot
+
+def plot_heatmap(ax, cmap, col, df_short, i, L = 0):
     """ Function that plots the flexibility scores, the hidrophobicity scores and
     the secondary structure by amino acid. Darker colors are asociated with less
     flexible and less hidrophobic zones. In the same way, darker color is assigned
     to helix structure and lighter one to coil structure.
     INPUT:
-            ax:
-            norm_flex_scores:
-            hydroph_scores_aa:
-            target_seq:
-            sstructures:
-            ws: window_size
+            ax: argument that will represent the plot
+            cmap: scale_colors
+            col: data frame column names with the names features to represent
+            df_short: df contianing part of the whole df (50 values in this case)
+            i: index that represents the splitted df that is being plotted
+            L: len of the whole data frame
 
     OUTPUT: Plot with flexibility scores, hidrophobicity values and secondary structure.
     """
-
-    import matplotlib.pyplot as plt
-    import pandas as pd
     import numpy as np
+    import matplotlib.pyplot as plt
+    # 1. Save information from the df_short
+    aa = df_short["amino_acids"]
+    l = len(df_short)
 
-    # 5. Create the plot:
+    # 2. Create the plot:
     ## Iterate over features
     for j in range(0,3):
 
-        # x = df["amino_acids"]
-
         x = list(range(0,l))
         y = [j]*len(x)
-        #print(df_short[col[j]])
         color = cmap(df_short[col[j]])
-        ax.scatter(x, y, color = color, s = 120) # s = shape
+        p = ax.scatter(x, y, color = color, cmap=cmap, s = 120) # s = shape
 
     ## Remove all spines
     ax.set_frame_on(False)
@@ -664,4 +673,17 @@ def plot_heatmap(ax, cmap, col, df_short, aa, l, i, L):
     ax.tick_params(size=0, colors="0.3")
     ## Set label for horizontal axis.
     ax.set_xlabel("Analysis", loc="center")
-    return ax
+    ## Add leyend
+
+    return p
+
+# def plot_linear(df_plot):
+#     """
+#     """
+#     import seaborn as sns
+#     sns.set_theme(style="darkgrid")
+#     L = range(1,len(df_plot)+1)
+#     df_plot.insert(L)
+#     sns.lineplot(x = "L", y="flex_scores",
+#              hue="region", style="event",
+#              data=df_plot)
