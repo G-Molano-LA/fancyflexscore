@@ -191,10 +191,13 @@ def pdb_quality_filter(protein_codes, hits_dict, resolution = 2):
         # Read pdb file
         structure = get_pdb_structure(f"structures/pdb{code}.ent", code)
         # Evaluate resolution
-        if structure.header['resolution'] <= resolution:
-            final_protein_codes.append(code)
-            final_chains.append(hits_dict[code])
-            #pdb_outfiles.append(f"structures/pdb{code}.pdb") and include variable in return
+        if structure.header['resolution']:
+            if structure.header['resolution'] <= resolution:
+                final_protein_codes.append(code)
+                final_chains.append(hits_dict[code])
+                #pdb_outfiles.append(f"structures/pdb{code}.pdb") and include variable in return
+            else:
+                os.remove(f"structures/pdb{code}.ent")
         else:
             os.remove(f"structures/pdb{code}.ent")
 
