@@ -35,3 +35,8 @@ For running the program, the user should execute:
 ```
 python3 fancyflexprot -i input_file -o output_file_name -ws window_size -v
 ```
+The arguments are:
+- -i INFILE: Input FASTA file with one unique record containing the identifier and sequence of the protein of interest. The identifier must be a uniprot ID. Chain must be specified by: >uniprotID:chain. This argument is required.  
+- -o OUTFILE: Output filename without extensions. It generates two files: filename\_results.csv and filename\_visualization.pdf (default: results). Two more files are also generated: a PDB for homologs (located at structures/directory) and a MSA aln of target protein and PDB homologs ((located at structures/directory)). THis argument is optional.  
+- -v verbose: To have a follow up of the program (default: False). This argument is optional.    
+- -ws window\_size: To change the window size when computing the flexibility score. The range of accepted values: {1,3,5,7,9,11,13}. This argument is optional (default: 7).  
